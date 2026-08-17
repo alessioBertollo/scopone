@@ -14,12 +14,14 @@ comprese le varianti di casa.
 
 ## Stato
 
-In sviluppo. Il dominio è completo e testato, la UI non esiste ancora.
+In sviluppo. Il motore e le schermate principali funzionano; manca la
+persistenza, quindi una partita si perde chiudendo l'app.
 
 - [x] Motore di punteggio (carte, denari, settebello, primiera, scope)
 - [x] Varianti configurabili (napola, rebello, traguardo a 11/16/21)
 - [x] Validazione delle mani impossibili
-- [ ] Interfaccia
+- [x] Interfaccia: nuova partita, tabellone, inserimento e modifica mano
+- [ ] Persistenza della partita in corso
 - [ ] Storico e statistiche
 - [ ] Pubblicazione su App Store e Google Play
 
@@ -69,8 +71,12 @@ npm run verify
 ## Architettura
 
 ```
+app/          rotte expo-router: index (nuova partita), match, hand
 src/
   domain/     logica pura, nessuna dipendenza da React o React Native
+  store/      stato della partita (zustand), guscio sottile sul dominio
+  ui/         componenti presentazionali riutilizzabili
+  components/ componenti legati al dominio
   test/       factory condivise dai test
 ```
 
@@ -79,6 +85,10 @@ poche centinaia di millisecondi, senza emulatori e senza bundler. La UI
 consuma il dominio e non ricalcola mai i punti per conto proprio.
 
 La copertura del dominio è al 100% ed è vincolata in CI.
+
+Lo stile usa NativeWind. I colori sono variabili CSS definite in `global.css`
+e mappate nel tema Tailwind, così il tema chiaro e quello scuro cambiano in
+un posto solo.
 
 ## Licenza
 

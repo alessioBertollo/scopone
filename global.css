@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Palette da tavolo da gioco: carta avorio, feltro verde, ottone.
+ * I valori sono canali RGB separati da spazi, così Tailwind può applicarci
+ * l'opacità con la sintassi `bg-felt/20`.
+ */
+:root {
+  --color-bg: 245 241 232;
+  --color-surface: 255 254 250;
+  --color-surface-sunken: 237 232 220;
+  --color-border: 224 216 198;
+  --color-text: 28 25 23;
+  --color-muted: 120 113 108;
+
+  --color-felt: 27 94 63;
+  --color-felt-soft: 45 122 85;
+  --color-brass: 168 118 10;
+  --color-danger: 185 28 28;
+
+  --color-team-a: 27 94 63;
+  --color-team-b: 166 61 47;
+}
+
+/*
+ * Il tema scuro è dichiarato due volte di proposito: la media query copre il
+ * caso in cui è il sistema operativo a decidere, la classe `.dark` copre il
+ * caso in cui è NativeWind ad applicarla. Avendo specificità maggiore, la
+ * classe vince quando entrambe sono presenti.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: 18 16 14;
+    --color-surface: 32 29 26;
+    --color-surface-sunken: 24 21 19;
+    --color-border: 58 53 49;
+    --color-text: 245 241 232;
+    --color-muted: 168 162 158;
+
+    --color-felt: 45 122 85;
+    --color-felt-soft: 61 148 105;
+    --color-brass: 212 160 23;
+    --color-danger: 239 68 68;
+
+    --color-team-a: 61 148 105;
+    --color-team-b: 224 122 95;
+  }
+}
+
+.dark:root {
+  --color-bg: 18 16 14;
+  --color-surface: 32 29 26;
+  --color-surface-sunken: 24 21 19;
+  --color-border: 58 53 49;
+  --color-text: 245 241 232;
+  --color-muted: 168 162 158;
+
+  --color-felt: 45 122 85;
+  --color-felt-soft: 61 148 105;
+  --color-brass: 212 160 23;
+  --color-danger: 239 68 68;
+
+  --color-team-a: 61 148 105;
+  --color-team-b: 224 122 95;
+}

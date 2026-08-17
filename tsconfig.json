@@ -12,6 +12,13 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["**/*.ts", "**/*.mts", "**/*.tsx", "expo-env.d.ts", ".expo/types/**/*.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.mts",
+    "**/*.tsx",
+    "expo-env.d.ts",
+    ".expo/types/**/*.ts",
+    "nativewind-env.d.ts"
+  ],
   "exclude": ["node_modules", "coverage"]
 }

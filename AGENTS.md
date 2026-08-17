@@ -18,13 +18,28 @@ npm run lint:fix      # formattazione e fix automatici (Biome)
 
 ## Architettura
 
+- `app/` — rotte expo-router: `index` (nuova partita), `match` (tabellone),
+  `hand` (inserimento e modifica mano, presentata come modale).
 - `src/domain/` — logica pura, zero dipendenze da React o React Native.
   È il cuore del progetto: ogni regola di punteggio vive qui ed è testata.
+- `src/store/` — stato della partita con zustand. Non contiene regole di
+  punteggio: delega tutto al dominio.
+- `src/ui/` — componenti presentazionali riutilizzabili, senza logica di gioco.
+- `src/components/` — componenti che conoscono il dominio.
 - `src/test/` — factory per i test, non codice di produzione.
-- La UI (quando esisterà) consuma il dominio e non ricalcola mai i punti.
 
 Il dominio deve restare importabile da Node senza toccare React Native:
-è ciò che permette ai test di girare in millisecondi.
+è ciò che permette ai test di girare in millisecondi. La UI consuma il
+dominio e non ricalcola mai i punti per conto proprio.
+
+## Stile
+
+NativeWind con i colori come variabili CSS in `global.css`, mappate nel tema
+Tailwind. Per cambiare la palette si tocca solo `global.css`.
+
+`darkMode` in `tailwind.config.js` deve restare `'class'`: con `'media'`
+(che è anche il default quando il campo manca) il runtime web di NativeWind
+va in errore appena sincronizza lo schema colori.
 
 ## Convenzioni
 
