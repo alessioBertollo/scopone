@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Il settebello: il sette di denari, la carta più riconoscibile dello scopone.
+    Nessun testo, solo tracciati: la resa non dipende dai font di sistema.
+  -->
+  <title>Scopone: il settebello, moneta d'oro con il sette su feltro verde</title>
+  <defs>
+    <radialGradient id="feltro" cx="50%" cy="40%" r="78%">
+      <stop offset="0%" stop-color="#2A7A53" />
+      <stop offset="100%" stop-color="#123E2A" />
+    </radialGradient>
+    <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F2CF6B" />
+      <stop offset="55%" stop-color="#D9A836" />
+      <stop offset="100%" stop-color="#B0790F" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#feltro)" />
+
+  <!-- Moneta -->
+  <circle cx="512" cy="512" r="300" fill="url(#oro)" />
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#7C5406" stroke-opacity="0.45" stroke-width="8" />
+  <circle cx="512" cy="512" r="266" fill="none" stroke="#8A5E08" stroke-opacity="0.30" stroke-width="7" />
+
+  <!-- Il sette. Niente barra trasversale: a icona piccola legge come un
+       segno di cancellatura, e nella versione monocromatica romperebbe il
+       ritaglio della silhouette. -->
+  <path fill="#123E2A" d="M372 344 H656 V420 L520 680 H430 L566 420 H372 Z" />
+</svg>

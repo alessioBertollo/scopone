@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Icona monocromatica per i temi Android: una sola silhouette piena, che il
+    sistema ricolora. Il sette è ritagliato dalla moneta con la regola
+    evenodd, così resta leggibile qualunque colore venga applicato.
+  -->
+  <title>Scopone: silhouette del settebello</title>
+  <path
+    fill="#ffffff"
+    fill-rule="evenodd"
+    d="M212 512 A300 300 0 1 1 812 512 A300 300 0 1 1 212 512 Z
+       M372 344 H656 V420 L520 680 H430 L566 420 H372 Z"
+  />
+</svg>

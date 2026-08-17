@@ -48,6 +48,23 @@ Il dominio deve restare importabile da Node senza toccare React Native:
 è ciò che permette ai test di girare in millisecondi. La UI consuma il
 dominio e non ricalcola mai i punti per conto proprio.
 
+## Icone
+
+La fonte di verità sono gli SVG in `assets/source/`; i PNG sono generati con
+`npm run icons` (richiede `rsvg-convert`, da `brew install librsvg`) e
+committati perché servono alla build. Non modificare i PNG a mano.
+
+Il soggetto è il settebello: moneta d'oro con il sette, su feltro verde.
+Nessun testo negli SVG, solo tracciati, così la resa non dipende dai font
+installati.
+
+Attenzione alla versione monocromatica: è una silhouette unica in cui il
+sette è ritagliato dalla moneta con `fill-rule="evenodd"`. Qualunque forma
+aggiunta che si **sovrapponga** al sette verrebbe riempita invece che
+ritagliata, spezzando la cifra. Verifica sempre il risultato rasterizzando su
+fondo colorato (`rsvg-convert -b "#1B5E3F"`), perché su bianco il difetto è
+invisibile.
+
 ## Stile
 
 NativeWind con i colori come variabili CSS in `global.css`, mappate nel tema

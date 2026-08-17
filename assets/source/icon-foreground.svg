@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    Primo piano dell'icona adattiva Android: solo la moneta, su fondo
+    trasparente. Il diametro resta entro la zona sicura del 66% del lato,
+    perché il sistema ritaglia questa immagine in forme diverse.
+  -->
+  <title>Scopone: la moneta del settebello</title>
+  <defs>
+    <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F2CF6B" />
+      <stop offset="55%" stop-color="#D9A836" />
+      <stop offset="100%" stop-color="#B0790F" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="512" cy="512" r="300" fill="url(#oro)" />
+  <circle cx="512" cy="512" r="300" fill="none" stroke="#7C5406" stroke-opacity="0.45" stroke-width="8" />
+  <circle cx="512" cy="512" r="266" fill="none" stroke="#8A5E08" stroke-opacity="0.30" stroke-width="7" />
+
+  <path fill="#123E2A" d="M372 344 H656 V420 L520 680 H430 L566 420 H372 Z" />
+</svg>
