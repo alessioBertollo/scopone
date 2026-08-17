@@ -22,8 +22,12 @@ npm run lint:fix      # formattazione e fix automatici (Biome)
   `hand` (inserimento e modifica mano, presentata come modale).
 - `src/domain/` — logica pura, zero dipendenze da React o React Native.
   È il cuore del progetto: ogni regola di punteggio vive qui ed è testata.
-- `src/store/` — stato della partita con zustand. Non contiene regole di
-  punteggio: delega tutto al dominio.
+- `src/store/` — stato della partita con zustand, persistito su AsyncStorage.
+  Non contiene regole di punteggio: delega tutto al dominio.
+  `match-store.ts` è verificabile in Node (i test sostituiscono AsyncStorage
+  con un mock in memoria via alias in `vitest.config.mts`); `hooks.ts` tiene
+  il collegamento a React, che un renderer lo richiede, ed è escluso dalla
+  copertura.
 - `src/ui/` — componenti presentazionali riutilizzabili, senza logica di gioco.
 - `src/components/` — componenti che conoscono il dominio.
 - `src/test/` — factory per i test, non codice di produzione.

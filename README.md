@@ -14,15 +14,15 @@ comprese le varianti di casa.
 
 ## Stato
 
-In sviluppo. Il motore e le schermate principali funzionano; manca la
-persistenza, quindi una partita si perde chiudendo l'app.
+In sviluppo, ma già utilizzabile: si può giocare una partita intera e
+riprenderla dopo aver chiuso l'app.
 
 - [x] Motore di punteggio (carte, denari, settebello, primiera, scope)
 - [x] Varianti configurabili (napola, rebello, traguardo a 11/16/21)
 - [x] Validazione delle mani impossibili
 - [x] Interfaccia: nuova partita, tabellone, inserimento e modifica mano
-- [ ] Persistenza della partita in corso
-- [ ] Storico e statistiche
+- [x] Persistenza della partita in corso
+- [ ] Storico delle partite concluse e statistiche
 - [ ] Pubblicazione su App Store e Google Play
 
 ## Regole implementate
@@ -74,11 +74,15 @@ npm run verify
 app/          rotte expo-router: index (nuova partita), match, hand
 src/
   domain/     logica pura, nessuna dipendenza da React o React Native
-  store/      stato della partita (zustand), guscio sottile sul dominio
+  store/      stato della partita (zustand + AsyncStorage), guscio sul dominio
   ui/         componenti presentazionali riutilizzabili
   components/ componenti legati al dominio
   test/       factory condivise dai test
 ```
+
+La partita in corso viene salvata sul dispositivo a ogni modifica e riletta
+all'avvio. Se il salvataggio non è più calcolabile — per esempio dopo un
+cambio di formato — viene scartato invece di far crashare l'app.
 
 Il dominio è TypeScript puro e gira in Node: i test completi si eseguono in
 poche centinaia di millisecondi, senza emulatori e senza bundler. La UI

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Text, TextInput, View } from 'react-native'
 import { DEFAULT_RULES, type NapolaRule } from '../src/domain/rules'
+import { useMatchState } from '../src/store/hooks'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
@@ -70,6 +71,10 @@ export default function NewMatchScreen() {
   const router = useRouter()
   const startMatch = useMatchStore((state) => state.startMatch)
   const hasStarted = useMatchStore((state) => state.hasStarted)
+  const savedTeams = useMatchStore((state) => state.match.teamNames)
+  const saved = useMatchState()
+
+  const savedLabel = `${savedTeams.A} ${saved.totals.A} – ${savedTeams.B} ${saved.totals.B}`
 
   const [nameA, setNameA] = useState('Noi')
   const [nameB, setNameB] = useState('Loro')
@@ -98,7 +103,11 @@ export default function NewMatchScreen() {
           <Button label="Inizia partita" onPress={start} />
           {hasStarted ? (
             <Button
-              label="Riprendi partita in corso"
+              label={
+                saved.status === 'finished'
+                  ? `Rivedi l'ultima partita · ${savedLabel}`
+                  : `Riprendi · ${savedLabel}`
+              }
               variant="ghost"
               onPress={() => router.push('/match')}
             />
