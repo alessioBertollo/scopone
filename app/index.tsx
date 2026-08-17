@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Text, TextInput, View } from 'react-native'
-import { DEFAULT_RULES, type NapolaRule } from '../src/domain/rules'
+import { DEFAULT_RULES, type NapolaRule, type WinRule } from '../src/domain/rules'
 import { useMatchState } from '../src/store/hooks'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
@@ -9,6 +9,7 @@ import { Card } from '../src/ui/Card'
 import { cn } from '../src/ui/cn'
 import { Screen } from '../src/ui/Screen'
 import { Segmented } from '../src/ui/Segmented'
+import { suggestTeamNames } from '../src/ui/team-names'
 
 const PLACEHOLDER_COLOR = '#8A8580'
 
@@ -33,14 +34,21 @@ const YES_NO = [
 
 type YesNo = (typeof YES_NO)[number]['value']
 
+const WIN_RULES: { value: WinRule; label: string }[] = [
+  { value: 'reach', label: 'Raggiungerlo' },
+  { value: 'exceed', label: 'Superarlo' },
+]
+
 function NameField({
   label,
+  placeholder,
   value,
   onChange,
   tone,
   testID,
 }: {
   label: string
+  placeholder: string
   value: string
   onChange: (value: string) => void
   tone: 'a' | 'b'
@@ -62,7 +70,7 @@ function NameField({
         onChangeText={onChange}
         maxLength={16}
         autoCorrect={false}
-        placeholder={label}
+        placeholder={placeholder}
         placeholderTextColor={PLACEHOLDER_COLOR}
         className="mt-1.5 rounded-xl bg-sunken px-4 py-3 text-base text-ink"
       />
@@ -79,18 +87,26 @@ export default function NewMatchScreen() {
 
   const savedLabel = `${savedTeams.A} ${saved.totals.A} – ${savedTeams.B} ${saved.totals.B}`
 
-  const [nameA, setNameA] = useState('Noi')
-  const [nameB, setNameB] = useState('Loro')
+  // Suggeriti una volta per apertura della schermata: se cambiassero a ogni
+  // battitura, il segnaposto ballerebbe sotto le dita dell'utente.
+  const [suggested] = useState(suggestTeamNames)
+
+  const [nameA, setNameA] = useState('')
+  const [nameB, setNameB] = useState('')
   const [target, setTarget] = useState<TargetValue>('21')
+  const [winRule, setWinRule] = useState<WinRule>('reach')
+  const [primiera, setPrimiera] = useState<YesNo>('si')
   const [napola, setNapola] = useState<NapolaRule>('off')
   const [rebello, setRebello] = useState<YesNo>('no')
 
   const start = () => {
     startMatch(
-      { A: nameA.trim() || 'Noi', B: nameB.trim() || 'Loro' },
+      { A: nameA.trim() || suggested.A, B: nameB.trim() || suggested.B },
       {
         ...DEFAULT_RULES,
         targetScore: Number(target),
+        winRule,
+        primieraEnabled: primiera === 'si',
         napola,
         rebello: rebello === 'si',
       },
@@ -126,10 +142,11 @@ export default function NewMatchScreen() {
         </Text>
       </View>
 
-      <Card title="Squadre">
+      <Card title="Squadre" subtitle="Lascia il nome suggerito o scrivi il tuo.">
         <View className="flex-row gap-3">
           <NameField
             label="Squadra 1"
+            placeholder={suggested.A}
             value={nameA}
             onChange={setNameA}
             tone="a"
@@ -137,6 +154,7 @@ export default function NewMatchScreen() {
           />
           <NameField
             label="Squadra 2"
+            placeholder={suggested.B}
             value={nameB}
             onChange={setNameB}
             tone="b"
@@ -145,24 +163,67 @@ export default function NewMatchScreen() {
         </View>
       </Card>
 
-      <Card title="Si vince a" subtitle="La partita si chiude solo senza parità.">
-        <Segmented
-          options={[...TARGETS]}
-          value={target}
-          onChange={setTarget}
-          testID="traguardo"
-        />
+      <Card title="Traguardo" subtitle="A pari punti si gioca la mano di spareggio.">
+        <View className="gap-4">
+          <Segmented
+            options={[...TARGETS]}
+            value={target}
+            onChange={setTarget}
+            testID="traguardo"
+          />
+          <View>
+            <Text className="mb-2 text-ink text-sm">Per vincere serve</Text>
+            <Segmented
+              options={WIN_RULES}
+              value={winRule}
+              onChange={setWinRule}
+              testID="regola-vittoria"
+            />
+            <Text className="mt-1.5 text-muted text-xs">
+              {winRule === 'reach'
+                ? `Si vince arrivando a ${target} punti.`
+                : `A ${target} punti si continua: per vincere servono almeno ${Number(target) + 1} punti.`}
+            </Text>
+          </View>
+        </View>
       </Card>
 
-      <Card title="Varianti" subtitle="Lascia tutto su No per lo scopone scientifico classico.">
+      <Card
+        title="Varianti"
+        subtitle="Le impostazioni di partenza sono quelle dello scopone scientifico."
+      >
         <View className="gap-4">
           <View>
+            <Text className="mb-2 text-ink text-sm">Primiera</Text>
+            <Segmented
+              options={[...YES_NO]}
+              value={primiera}
+              onChange={setPrimiera}
+              testID="primiera-attiva"
+            />
+            {primiera === 'no' ? (
+              <Text className="mt-1.5 text-muted text-xs">
+                Ogni mano assegnerà tre punti base invece di quattro.
+              </Text>
+            ) : null}
+          </View>
+          <View>
             <Text className="mb-2 text-ink text-sm">Napola</Text>
-            <Segmented options={NAPOLA_OPTIONS} value={napola} onChange={setNapola} />
+            <Segmented
+              options={NAPOLA_OPTIONS}
+              value={napola}
+              onChange={setNapola}
+              testID="napola"
+            />
           </View>
           <View>
             <Text className="mb-2 text-ink text-sm">Rebello (re di denari)</Text>
-            <Segmented options={[...YES_NO]} value={rebello} onChange={setRebello} />
+            <Segmented
+              options={[...YES_NO]}
+              value={rebello}
+              onChange={setRebello}
+              testID="rebello"
+            />
           </View>
         </View>
       </Card>

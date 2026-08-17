@@ -210,38 +210,40 @@ export default function HandScreen() {
         />
       </Card>
 
-      <Card title="Primiera">
-        <View className="gap-3">
-          <Segmented
-            options={[
-              { value: 'manual', label: 'La so già' },
-              { value: 'cards', label: 'Calcolala tu' },
-            ]}
-            value={primieraMode}
-            onChange={setPrimieraMode}
-            testID="primiera-modo"
-          />
-
-          {primieraMode === 'manual' ? (
+      {rules.primieraEnabled ? (
+        <Card title="Primiera">
+          <View className="gap-3">
             <Segmented
               options={[
-                { value: 'A' as const, label: teamNames.A, tone: 'a' as const },
-                { value: 'pari' as const, label: 'Pari', tone: 'neutral' as const },
-                { value: 'B' as const, label: teamNames.B, tone: 'b' as const },
+                { value: 'manual', label: 'La so già' },
+                { value: 'cards', label: 'Calcolala tu' },
               ]}
-              value={primieraChoice}
-              onChange={setPrimieraChoice}
-              testID="primiera"
+              value={primieraMode}
+              onChange={setPrimieraMode}
+              testID="primiera-modo"
             />
-          ) : (
-            <PrimieraCardsInput
-              best={primieraBest}
-              teamNames={teamNames}
-              onChange={setPrimieraBest}
-            />
-          )}
-        </View>
-      </Card>
+
+            {primieraMode === 'manual' ? (
+              <Segmented
+                options={[
+                  { value: 'A' as const, label: teamNames.A, tone: 'a' as const },
+                  { value: 'pari' as const, label: 'Pari', tone: 'neutral' as const },
+                  { value: 'B' as const, label: teamNames.B, tone: 'b' as const },
+                ]}
+                value={primieraChoice}
+                onChange={setPrimieraChoice}
+                testID="primiera"
+              />
+            ) : (
+              <PrimieraCardsInput
+                best={primieraBest}
+                teamNames={teamNames}
+                onChange={setPrimieraBest}
+              />
+            )}
+          </View>
+        </Card>
+      ) : null}
 
       <Card title="Scope">
         <Stepper

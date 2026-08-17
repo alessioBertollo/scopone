@@ -20,6 +20,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "^0.21.2",
+    "react-native-worklets": "0.10.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -48,6 +49,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "maestro test .maestro",
     "icons": "bash scripts/generate-icons.sh",
+    "doctor": "npx --yes expo-doctor@latest",
     "verify": "npm run lint && npm run typecheck && npm run test"
   },
   "engines": {

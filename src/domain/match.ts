@@ -44,12 +44,20 @@ export function removeHand(match: Match, index: number): Match {
 }
 
 /**
- * La partita è chiusa quando almeno una squadra ha raggiunto il traguardo
- * e le due squadre non sono in parità: a pari punti si gioca un'altra mano.
+ * Punti che servono davvero per chiudere: col traguardo da superare, 21 non
+ * basta e ne servono 22.
  */
-function decide(totals: ByTeam<number>, targetScore: number): TeamId | null {
+function pointsNeeded(rules: RuleSet): number {
+  return rules.winRule === 'exceed' ? rules.targetScore + 1 : rules.targetScore
+}
+
+/**
+ * La partita è chiusa quando almeno una squadra ha tagliato il traguardo e le
+ * due squadre non sono in parità: a pari punti si gioca un'altra mano.
+ */
+function decide(totals: ByTeam<number>, rules: RuleSet): TeamId | null {
   const best = Math.max(totals.A, totals.B)
-  if (best < targetScore || totals.A === totals.B) return null
+  if (best < pointsNeeded(rules) || totals.A === totals.B) return null
   return totals.A > totals.B ? 'A' : 'B'
 }
 
@@ -70,7 +78,7 @@ export function scoreMatch(match: Match): MatchState {
     progression.push({ ...totals })
 
     if (decidedAtHand === null) {
-      const decided = decide(totals, match.rules.targetScore)
+      const decided = decide(totals, match.rules)
       if (decided !== null) {
         winner = decided
         decidedAtHand = index
@@ -86,8 +94,8 @@ export function scoreMatch(match: Match): MatchState {
     winner,
     decidedAtHand,
     remaining: {
-      A: Math.max(0, match.rules.targetScore - totals.A),
-      B: Math.max(0, match.rules.targetScore - totals.B),
+      A: Math.max(0, pointsNeeded(match.rules) - totals.A),
+      B: Math.max(0, pointsNeeded(match.rules) - totals.B),
     },
   }
 }

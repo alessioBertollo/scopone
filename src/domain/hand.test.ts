@@ -168,6 +168,51 @@ describe('scoreHand', () => {
     expect(score.totals.A + score.totals.B).toBe(4)
   })
 
+  it('non assegna la primiera quando entrambe hanno due sette e due sei', () => {
+    const hand = makeHand({
+      primiera: {
+        mode: 'cards',
+        best: {
+          // 21 + 21 + 18 + 18 da una parte, 18 + 18 + 21 + 21 dall'altra.
+          A: { denari: 7, coppe: 7, spade: 6, bastoni: 6 },
+          B: { denari: 6, coppe: 6, spade: 7, bastoni: 7 },
+        },
+      },
+    })
+
+    expect(awardFor('primiera', hand)?.detail).toBe('78 - 78')
+    expect(awardFor('primiera', hand)?.winner).toBeNull()
+    // Resta solo il settebello: il punto della primiera non va a nessuno.
+    expect(scoreHand(hand, RULES).totals).toEqual({ A: 1, B: 0 })
+  })
+
+  it('ignora del tutto la primiera se la regola è disattivata', () => {
+    const rules = makeRules({ primieraEnabled: false })
+    const hand = makeHand({ primiera: { mode: 'manual', winner: 'B' } })
+    const score = scoreHand(hand, rules)
+
+    expect(score.awards.some((award) => award.kind === 'primiera')).toBe(false)
+    expect(score.totals).toEqual({ A: 1, B: 0 })
+  })
+
+  it('non contesta le carte di primiera se la primiera è disattivata', () => {
+    const rules = makeRules({ primieraEnabled: false })
+    const issues = validateHand(
+      makeHand({
+        primiera: { mode: 'cards', best: { A: { denari: 7 }, B: { denari: 7 } } },
+      }),
+      rules,
+    )
+    expect(codes(issues)).not.toContain('primiera.duplicateCard')
+  })
+
+  it('con la primiera disattivata i punti base scendono a tre', () => {
+    const rules = makeRules({ primieraEnabled: false })
+    const hand = makeHand({ cards: { A: 21, B: 19 }, denari: { A: 4, B: 6 } })
+    const score = scoreHand(hand, rules)
+    expect(score.totals.A + score.totals.B).toBe(3)
+  })
+
   it('calcola correttamente una mano realistica', () => {
     const hand = makeHand({
       cards: { A: 22, B: 18 },

@@ -133,7 +133,7 @@ export function validateHand(hand: HandInput, rules: RuleSet): ValidationIssue[]
     })
   }
 
-  if (hand.primiera.mode === 'cards') {
+  if (rules.primieraEnabled && hand.primiera.mode === 'cards') {
     for (const suit of SUITS) {
       const a = hand.primiera.best.A[suit]
       const b = hand.primiera.best.B[suit]
@@ -222,13 +222,15 @@ export function scoreHand(hand: HandInput, rules: RuleSet): HandScore {
 
   awards.push({ kind: 'settebello', winner: hand.settebello, value: 1 })
 
-  const primiera = resolvePrimiera(hand.primiera)
-  awards.push({
-    kind: 'primiera',
-    winner: primiera.winner,
-    value: 1,
-    detail: primiera.totals ? `${primiera.totals.A} - ${primiera.totals.B}` : undefined,
-  })
+  if (rules.primieraEnabled) {
+    const primiera = resolvePrimiera(hand.primiera)
+    awards.push({
+      kind: 'primiera',
+      winner: primiera.winner,
+      value: 1,
+      detail: primiera.totals ? `${primiera.totals.A} - ${primiera.totals.B}` : undefined,
+    })
+  }
 
   if (rules.scopeEnabled) {
     for (const team of TEAMS) {

@@ -34,3 +34,8 @@ jobs:
 
       - name: Test
         run: npm run test:coverage
+
+      # Intercetta dipendenze native disallineate o peer mancanti: sono
+      # problemi che non emergono dai test perché rompono solo la build vera.
+      - name: Expo doctor
+        run: npm run doctor

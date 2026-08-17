@@ -106,6 +106,49 @@ describe('scoreMatch', () => {
     expect(state.status).toBe('finished')
   })
 
+  describe('traguardo da superare', () => {
+    const rules = makeRules({ targetScore: 8, winRule: 'exceed' })
+
+    it('non chiude la partita a punteggio esatto', () => {
+      // Due cappotti da quattro punti fanno esattamente otto.
+      const state = scoreMatch({ ...createMatch(), rules, hands: [A_SWEEP, A_SWEEP] })
+
+      expect(state.totals.A).toBe(8)
+      expect(state.status).toBe('ongoing')
+      expect(state.winner).toBeNull()
+    })
+
+    it('chiude appena il traguardo viene superato', () => {
+      const state = scoreMatch({
+        ...createMatch(),
+        rules,
+        hands: [A_SWEEP, A_SWEEP, A_SWEEP],
+      })
+
+      expect(state.totals.A).toBe(12)
+      expect(state.status).toBe('finished')
+      expect(state.winner).toBe('A')
+      expect(state.decidedAtHand).toBe(2)
+    })
+
+    it('conta un punto in più fra quelli mancanti', () => {
+      const state = scoreMatch({ ...createMatch(), rules, hands: [] })
+      // Per superare 8 servono 9 punti, non 8.
+      expect(state.remaining).toEqual({ A: 9, B: 9 })
+    })
+
+    it('con la regola normale lo stesso punteggio chiude la partita', () => {
+      const state = scoreMatch({
+        ...createMatch(),
+        rules: makeRules({ targetScore: 8, winRule: 'reach' }),
+        hands: [A_SWEEP, A_SWEEP],
+      })
+
+      expect(state.status).toBe('finished')
+      expect(state.winner).toBe('A')
+    })
+  })
+
   it('propaga l errore di una mano non valida', () => {
     const match = { ...createMatch(), hands: [makeHand({ cards: { A: 1, B: 1 } })] }
     expect(() => scoreMatch(match)).toThrow()
