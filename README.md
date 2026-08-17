@@ -66,6 +66,28 @@ npm run verify
 | `npm run test:watch` | test in watch mode |
 | `npm run test:coverage` | test con report di copertura |
 | `npm run test:e2e` | flow Maestro su emulatore o simulatore |
+| `npm run icons` | rigenera i PNG delle icone dagli SVG |
+
+## Provare l'app sul telefono
+
+Il giro quotidiano usa **Expo Go**, senza attendere build:
+
+1. Installa Expo Go dal Play Store o dall'App Store
+2. `npm start` sul computer
+3. Inquadra il QR code col telefono
+
+L'app si ricarica da sola a ogni salvataggio. Se il telefono e il computer
+sono su una rete che isola i dispositivi fra loro — capita spesso sulle reti
+aziendali — usa `npm run start:tunnel`.
+
+Expo Go esegue il codice dentro il proprio contenitore: icona, nome e splash
+sono i suoi, non quelli dell'app. Per vedere il prodotto vero serve una build:
+
+```bash
+npx eas-cli build --profile preview --platform android
+```
+
+che produce un APK installabile e condivisibile.
 | `npm run lint:fix` | formattazione e fix automatici |
 | `npm start` | avvia Expo |
 
