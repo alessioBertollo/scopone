@@ -65,6 +65,7 @@ npm run verify
 | `npm run verify` | lint, typecheck e test — da lanciare prima di ogni commit |
 | `npm run test:watch` | test in watch mode |
 | `npm run test:coverage` | test con report di copertura |
+| `npm run test:e2e` | flow Maestro su emulatore o simulatore |
 | `npm run lint:fix` | formattazione e fix automatici |
 | `npm start` | avvia Expo |
 

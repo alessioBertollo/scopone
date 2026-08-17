@@ -13,6 +13,11 @@ type SegmentedProps<T extends string> = {
   options: SegmentedOption<T>[]
   value: T
   onChange: (value: T) => void
+  /**
+   * Prefisso per i test end-to-end: ogni opzione espone `<testID>-<valore>`,
+   * così i flow non dipendono dalle etichette, che sono nomi di squadra.
+   */
+  testID?: string
 }
 
 const SELECTED_BG: Record<SegmentTone, string> = {
@@ -27,7 +32,12 @@ const SELECTED_TEXT: Record<SegmentTone, string> = {
   neutral: 'text-ink',
 }
 
-export function Segmented<T extends string>({ options, value, onChange }: SegmentedProps<T>) {
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  testID,
+}: SegmentedProps<T>) {
   return (
     <View className="flex-row rounded-2xl bg-sunken p-1">
       {options.map((option) => {
@@ -37,6 +47,7 @@ export function Segmented<T extends string>({ options, value, onChange }: Segmen
         return (
           <Pressable
             key={option.value}
+            testID={testID ? `${testID}-${option.value}` : undefined}
             accessibilityRole="button"
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}

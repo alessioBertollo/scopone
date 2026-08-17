@@ -1,0 +1,32 @@
+appId: com.alessiobertollo.scopone
+name: Calcolo della primiera dalle carte
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: 'inizia-partita'
+- tapOn:
+    id: 'aggiungi-mano'
+
+- tapOn:
+    id: 'primiera-modo-cards'
+- assertVisible: 'Denari'
+- assertVisible: 'Bastoni'
+
+# Il 7 vale 21 e il 6 vale 18: la primiera non segue l'ordine delle carte.
+- tapOn:
+    id: 'primiera-A-denari-7'
+- tapOn:
+    id: 'primiera-B-denari-6'
+
+- assertVisible:
+    id: 'primiera-totale-A'
+    text: '21'
+- assertVisible:
+    id: 'primiera-totale-B'
+    text: '18'
+
+# La stessa carta non può essere la migliore di entrambe le squadre.
+- assertVisible:
+    id: 'primiera-B-denari-7'
+    enabled: false

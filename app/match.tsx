@@ -44,6 +44,7 @@ function TeamTotal({
         {name}
       </Text>
       <Text
+        testID={`totale-${team}`}
         className={cn(
           'mt-1 font-bold text-6xl tabular-nums',
           team === 'A' ? 'text-team-a' : 'text-team-b',
@@ -83,6 +84,7 @@ function HandRow({
 
   return (
     <Pressable
+      testID={`mano-${index}`}
       accessibilityRole="button"
       accessibilityLabel={`Mano ${index + 1}, modifica`}
       onPress={onPress}
@@ -135,9 +137,17 @@ export default function MatchScreen() {
       footer={
         <View className="gap-2">
           {finished ? (
-            <Button label="Nuova partita" onPress={() => router.replace('/')} />
+            <Button
+              label="Nuova partita"
+              testID="nuova-partita"
+              onPress={() => router.replace('/')}
+            />
           ) : (
-            <Button label="Aggiungi mano" onPress={() => router.push('/hand')} />
+            <Button
+              label="Aggiungi mano"
+              testID="aggiungi-mano"
+              onPress={() => router.push('/hand')}
+            />
           )}
           <Button
             label="Torna alle impostazioni"

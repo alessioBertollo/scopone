@@ -39,15 +39,18 @@ function RankChip({
   disabled,
   team,
   onPress,
+  testID,
 }: {
   label: string
   selected: boolean
   disabled: boolean
   team: TeamId
   onPress: () => void
+  testID: string
 }) {
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
@@ -93,6 +96,7 @@ export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
                   <View className="flex-row gap-1.5 pr-2">
                     <RankChip
                       label="—"
+                      testID={`primiera-${team}-${suit}-nessuna`}
                       team={team}
                       selected={current === undefined}
                       disabled={false}
@@ -102,6 +106,7 @@ export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
                       <RankChip
                         key={rank}
                         label={shortRank(rank)}
+                        testID={`primiera-${team}-${suit}-${rank}`}
                         team={team}
                         selected={current === rank}
                         disabled={takenByOther === rank}
@@ -119,9 +124,13 @@ export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
       <View className="flex-row justify-between rounded-xl bg-sunken px-3 py-2">
         <Text className="text-muted text-xs">Totale primiera</Text>
         <Text className="text-xs">
-          <Text className="font-semibold text-team-a">{primieraTotal(best.A)}</Text>
+          <Text testID="primiera-totale-A" className="font-semibold text-team-a">
+            {primieraTotal(best.A)}
+          </Text>
           <Text className="text-muted"> — </Text>
-          <Text className="font-semibold text-team-b">{primieraTotal(best.B)}</Text>
+          <Text testID="primiera-totale-B" className="font-semibold text-team-b">
+            {primieraTotal(best.B)}
+          </Text>
         </Text>
       </View>
     </View>

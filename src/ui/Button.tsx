@@ -9,6 +9,8 @@ type ButtonProps = {
   variant?: Variant
   disabled?: boolean
   className?: string
+  /** Identificatore stabile per i test end-to-end. */
+  testID?: string
 }
 
 const CONTAINER: Record<Variant, string> = {
@@ -31,9 +33,11 @@ export function Button({
   variant = 'primary',
   disabled = false,
   className,
+  testID,
 }: ButtonProps) {
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}

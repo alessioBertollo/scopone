@@ -148,11 +148,17 @@ export default function HandScreen() {
 
           <Button
             label={editIndex !== null ? 'Salva modifiche' : 'Aggiungi mano'}
+            testID="salva-mano"
             onPress={save}
             disabled={issues.length > 0}
           />
           {editIndex !== null ? (
-            <Button label="Elimina mano" variant="danger" onPress={destroy} />
+            <Button
+              label="Elimina mano"
+              variant="danger"
+              testID="elimina-mano"
+              onPress={destroy}
+            />
           ) : null}
         </View>
       }
@@ -162,6 +168,7 @@ export default function HandScreen() {
           {editIndex !== null ? `Mano ${editIndex + 1}` : 'Nuova mano'}
         </Text>
         <Pressable
+          testID="annulla-mano"
           accessibilityRole="button"
           onPress={() => router.back()}
           className="px-2 py-1 active:opacity-60"
@@ -174,6 +181,7 @@ export default function HandScreen() {
         <Stepper
           label={teamNames.A}
           tone="a"
+          testID="carte"
           value={cardsA}
           onChange={setCardsA}
           max={DECK_SIZE}
@@ -185,6 +193,7 @@ export default function HandScreen() {
         <Stepper
           label={teamNames.A}
           tone="a"
+          testID="denari"
           value={denariA}
           onChange={setDenariA}
           max={CARDS_PER_SUIT}
@@ -193,7 +202,12 @@ export default function HandScreen() {
       </Card>
 
       <Card title="Settebello" subtitle="Il 7 di denari è sempre di qualcuno.">
-        <Segmented options={teamOptions} value={settebello} onChange={setSettebello} />
+        <Segmented
+          options={teamOptions}
+          value={settebello}
+          onChange={setSettebello}
+          testID="settebello"
+        />
       </Card>
 
       <Card title="Primiera">
@@ -205,6 +219,7 @@ export default function HandScreen() {
             ]}
             value={primieraMode}
             onChange={setPrimieraMode}
+            testID="primiera-modo"
           />
 
           {primieraMode === 'manual' ? (
@@ -216,6 +231,7 @@ export default function HandScreen() {
               ]}
               value={primieraChoice}
               onChange={setPrimieraChoice}
+              testID="primiera"
             />
           ) : (
             <PrimieraCardsInput
@@ -228,8 +244,22 @@ export default function HandScreen() {
       </Card>
 
       <Card title="Scope">
-        <Stepper label={teamNames.A} tone="a" value={scopeA} onChange={setScopeA} max={20} />
-        <Stepper label={teamNames.B} tone="b" value={scopeB} onChange={setScopeB} max={20} />
+        <Stepper
+          label={teamNames.A}
+          tone="a"
+          testID="scope-a"
+          value={scopeA}
+          onChange={setScopeA}
+          max={20}
+        />
+        <Stepper
+          label={teamNames.B}
+          tone="b"
+          testID="scope-b"
+          value={scopeB}
+          onChange={setScopeB}
+          max={20}
+        />
       </Card>
 
       {rules.napola !== 'off' ? (

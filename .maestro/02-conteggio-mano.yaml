@@ -1,0 +1,47 @@
+appId: com.alessiobertollo.scopone
+name: Conteggio di una mano e riporto sul tabellone
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: 'inizia-partita'
+- tapOn:
+    id: 'aggiungi-mano'
+
+- assertVisible: 'Nuova mano'
+
+# 22 carte e 6 denari a Noi, settebello a Noi, primiera a Loro.
+- tapOn:
+    id: 'carte-piu'
+- tapOn:
+    id: 'carte-piu'
+- assertVisible:
+    id: 'carte-valore'
+    text: '22'
+
+- tapOn:
+    id: 'denari-piu'
+- assertVisible:
+    id: 'denari-valore'
+    text: '6'
+
+- tapOn:
+    id: 'settebello-A'
+- tapOn:
+    id: 'primiera-B'
+
+# Carte, denari e settebello a Noi fanno 3; la primiera vale 1 a Loro.
+- assertVisible: 'Punti di questa mano'
+- tapOn:
+    id: 'salva-mano'
+
+- assertVisible:
+    id: 'mano-0'
+- assertVisible:
+    id: 'totale-A'
+    text: '3'
+- assertVisible:
+    id: 'totale-B'
+    text: '1'

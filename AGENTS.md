@@ -14,7 +14,19 @@ https://docs.expo.dev/versions/v57.0.0/ prima di scrivere codice Expo.
 npm run verify        # lint + typecheck + test, da lanciare prima di ogni commit
 npm run test:watch    # test in watch durante lo sviluppo
 npm run lint:fix      # formattazione e fix automatici (Biome)
+npm run test:e2e      # flow Maestro, richiede Maestro e un dispositivo attivo
 ```
+
+## Test end-to-end
+
+I flow stanno in `.maestro/` e girano su un emulatore Android in CI
+(workflow `E2E`, avvio manuale). Puntano agli identificatori `testID`, non
+alle etichette: i nomi delle squadre sono scelti dall'utente e diversi titoli
+sono resi maiuscoli via CSS, quindi il testo non è un aggancio affidabile.
+
+Aggiungendo un elemento interattivo, dargli un `testID` in kebab-case. I
+componenti composti espongono un prefisso: `Stepper` genera `<id>-meno`,
+`<id>-piu` e `<id>-valore`, `Segmented` genera `<id>-<valore-opzione>`.
 
 ## Architettura
 

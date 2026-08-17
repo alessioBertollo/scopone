@@ -1,0 +1,45 @@
+appId: com.alessiobertollo.scopone
+name: La partita sopravvive alla chiusura dell'app
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+
+- tapOn:
+    id: 'nome-squadra-a'
+- eraseText
+- inputText: 'Rossi'
+- hideKeyboard
+
+- tapOn:
+    id: 'inizia-partita'
+- tapOn:
+    id: 'aggiungi-mano'
+- tapOn:
+    id: 'settebello-A'
+- tapOn:
+    id: 'salva-mano'
+
+- assertVisible:
+    id: 'totale-A'
+    text: '1'
+
+# Chiusura completa dell'app: è il caso reale di chi risponde al telefono
+# a metà partita e la ritrova più tardi.
+- stopApp
+- launchApp
+
+- assertVisible:
+    id: 'riprendi-partita'
+- tapOn:
+    id: 'riprendi-partita'
+
+- assertVisible:
+    id: 'mano-0'
+- assertVisible:
+    id: 'totale-A'
+    text: '1'
+- assertVisible:
+    id: 'totale-B'
+    text: '0'

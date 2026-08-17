@@ -1,0 +1,37 @@
+appId: com.alessiobertollo.scopone
+name: Avvio di una nuova partita
+tags:
+  - smoke
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: 'Scopone'
+# A installazione pulita non c'è nulla da riprendere.
+- assertNotVisible:
+    id: 'riprendi-partita'
+
+- tapOn:
+    id: 'nome-squadra-a'
+- eraseText
+- inputText: 'Rossi'
+
+- tapOn:
+    id: 'nome-squadra-b'
+- eraseText
+- inputText: 'Bianchi'
+
+- hideKeyboard
+
+- tapOn:
+    id: 'traguardo-11'
+- tapOn:
+    id: 'inizia-partita'
+
+- assertVisible: 'Nessuna mano registrata'
+- assertVisible:
+    id: 'totale-A'
+    text: '0'
+- assertVisible:
+    id: 'totale-B'
+    text: '0'

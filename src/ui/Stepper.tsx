@@ -10,6 +10,8 @@ type StepperProps = {
   /** Testo secondario, ad esempio il valore derivato per l'altra squadra. */
   hint?: string
   tone?: 'a' | 'b' | 'neutral'
+  /** Prefisso per i test end-to-end: espone `<testID>-meno` e `<testID>-piu`. */
+  testID?: string
 }
 
 const VALUE_TONE = {
@@ -23,14 +25,17 @@ function StepButton({
   label,
   onPress,
   disabled,
+  testID,
 }: {
   symbol: string
   label: string
   onPress: () => void
   disabled: boolean
+  testID?: string
 }) {
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
@@ -54,6 +59,7 @@ export function Stepper({
   max = 99,
   hint,
   tone = 'neutral',
+  testID,
 }: StepperProps) {
   return (
     <View className="flex-row items-center justify-between py-1">
@@ -65,11 +71,13 @@ export function Stepper({
       <View className="flex-row items-center gap-2">
         <StepButton
           symbol="−"
+          testID={testID ? `${testID}-meno` : undefined}
           label={`Diminuisci ${label}`}
           disabled={value <= min}
           onPress={() => onChange(Math.max(min, value - 1))}
         />
         <Text
+          testID={testID ? `${testID}-valore` : undefined}
           className={cn('w-9 text-center font-semibold text-lg', VALUE_TONE[tone])}
           accessibilityLabel={`${label}: ${value}`}
         >
@@ -77,6 +85,7 @@ export function Stepper({
         </Text>
         <StepButton
           symbol="+"
+          testID={testID ? `${testID}-piu` : undefined}
           label={`Aumenta ${label}`}
           disabled={value >= max}
           onPress={() => onChange(Math.min(max, value + 1))}

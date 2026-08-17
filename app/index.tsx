@@ -38,11 +38,13 @@ function NameField({
   value,
   onChange,
   tone,
+  testID,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   tone: 'a' | 'b'
+  testID: string
 }) {
   return (
     <View className="flex-1">
@@ -55,6 +57,7 @@ function NameField({
         {label}
       </Text>
       <TextInput
+        testID={testID}
         value={value}
         onChangeText={onChange}
         maxLength={16}
@@ -100,7 +103,7 @@ export default function NewMatchScreen() {
       scroll
       footer={
         <View className="gap-2">
-          <Button label="Inizia partita" onPress={start} />
+          <Button label="Inizia partita" onPress={start} testID="inizia-partita" />
           {hasStarted ? (
             <Button
               label={
@@ -109,6 +112,7 @@ export default function NewMatchScreen() {
                   : `Riprendi · ${savedLabel}`
               }
               variant="ghost"
+              testID="riprendi-partita"
               onPress={() => router.push('/match')}
             />
           ) : null}
@@ -124,13 +128,30 @@ export default function NewMatchScreen() {
 
       <Card title="Squadre">
         <View className="flex-row gap-3">
-          <NameField label="Squadra 1" value={nameA} onChange={setNameA} tone="a" />
-          <NameField label="Squadra 2" value={nameB} onChange={setNameB} tone="b" />
+          <NameField
+            label="Squadra 1"
+            value={nameA}
+            onChange={setNameA}
+            tone="a"
+            testID="nome-squadra-a"
+          />
+          <NameField
+            label="Squadra 2"
+            value={nameB}
+            onChange={setNameB}
+            tone="b"
+            testID="nome-squadra-b"
+          />
         </View>
       </Card>
 
       <Card title="Si vince a" subtitle="La partita si chiude solo senza parità.">
-        <Segmented options={[...TARGETS]} value={target} onChange={setTarget} />
+        <Segmented
+          options={[...TARGETS]}
+          value={target}
+          onChange={setTarget}
+          testID="traguardo"
+        />
       </Card>
 
       <Card title="Varianti" subtitle="Lascia tutto su No per lo scopone scientifico classico.">
