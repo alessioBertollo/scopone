@@ -15,6 +15,15 @@ comportamento dell'app, qui va aggiornata la dichiarazione corrispondente.
 La privacy policy non sta qui: è una pagina pubblicata, e vive in
 [`docs/privacy.html`](../docs/privacy.html).
 
+## URL pubblici
+
+Serviti da GitHub Pages sulla cartella `docs/`, entrambi già attivi:
+
+| Campo del Play Console | URL |
+| --- | --- |
+| Sito web | https://alessiobertollo.github.io/scopone/ |
+| Norme sulla privacy | https://alessiobertollo.github.io/scopone/privacy.html |
+
 ## Ordine di esecuzione
 
 1. Verifica identità sul Play Console — è bloccante e può richiedere giorni
@@ -26,8 +35,11 @@ La privacy policy non sta qui: è una pagina pubblicata, e vive in
 
 ## Cosa manca ancora
 
-- [ ] Email di contatto pubblica dedicata (non quella di lavoro)
+- [x] GitHub Pages attivato sulla cartella `docs/`
+- [ ] **Email di contatto pubblica dedicata** — non quella di lavoro. Finché
+      non c'è, la privacy policy pubblicata mostra il segnaposto
+      `EMAIL_DA_INSERIRE`: va sostituito prima di mandare l'URL in revisione,
+      perché i revisori la aprono davvero
 - [ ] Icona dell'app: ora è ancora quella di default di Expo
 - [ ] Feature graphic 1024×500
 - [ ] Almeno due screenshot da telefono reale
-- [ ] GitHub Pages attivato sulla cartella `docs/`
