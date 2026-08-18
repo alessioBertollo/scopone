@@ -52,7 +52,8 @@
     "test:e2e": "maestro test .maestro",
     "icons": "bash scripts/generate-icons.sh",
     "doctor": "npx --yes expo-doctor@latest",
-    "verify": "npm run lint && npm run typecheck && npm run test"
+    "verify": "npm run lint && npm run typecheck && npm run test",
+    "check:rls": "node scripts/check-rls.mjs"
   },
   "engines": {
     "node": ">=22"
