@@ -42,3 +42,6 @@ yarn-error.*
 
 # coverage
 coverage/
+
+# Supabase (non committare .env)
+.env
