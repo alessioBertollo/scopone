@@ -110,8 +110,12 @@ Misurato il 18/08/2026 sull'APK di release, architettura `arm64-v8a`:
 
 Partiva da 93 MB. La riduzione è venuta da due mosse, entrambe in
 `app.json` ed `eas.json`: R8 con rimozione delle risorse inutilizzate, e
-l'APK preview limitato alle due architetture ARM reali. `x86` e `x86_64` servono
-solo agli emulatori.
+l'APK preview limitato alla sola `arm64-v8a`.
+
+Le altre architetture sono state provate e scartate: `x86` e `x86_64` servono
+solo agli emulatori, e `armeabi-v7a` costa 13,5 MB per coprire telefoni a 32
+bit che sul Play Store vengono comunque serviti dall'app bundle. L'APK
+preview è un artefatto di prova, non il canale di distribuzione.
 
 Non insistere su ulteriori ottimizzazioni: il margine è esaurito.
 
