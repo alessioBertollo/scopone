@@ -110,7 +110,7 @@ Misurato il 18/08/2026 sull'APK di release, architettura `arm64-v8a`:
 
 Partiva da 93 MB. La riduzione è venuta da due mosse, entrambe in
 `app.json` ed `eas.json`: R8 con rimozione delle risorse inutilizzate, e
-l'APK preview limitato a una sola architettura. `x86` e `x86_64` servono
+l'APK preview limitato alle due architetture ARM reali. `x86` e `x86_64` servono
 solo agli emulatori.
 
 Non insistere su ulteriori ottimizzazioni: il margine è esaurito.
