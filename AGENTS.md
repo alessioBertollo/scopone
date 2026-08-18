@@ -95,3 +95,35 @@ va in errore appena sincronizza lo schema colori.
 - La partita si chiude solo se una squadra raggiunge il traguardo **e**
   non è in parità con l'altra: a pari punti si gioca un'altra mano.
 - Napola e rebello sono varianti opzionali, disattivate di default.
+
+## Peso dell'app
+
+Misurato il 18/08/2026 sull'APK di release, architettura `arm64-v8a`:
+
+| Voce | Peso |
+| --- | --- |
+| Librerie native | 19,3 MB |
+| Bytecode dopo R8 | 13,7 MB |
+| Bundle JavaScript | 2,9 MB |
+| Risorse | 3,2 MB |
+| **APK totale** | **30,6 MB** |
+
+Partiva da 93 MB. La riduzione è venuta da due mosse, entrambe in
+`app.json` ed `eas.json`: R8 con rimozione delle risorse inutilizzate, e
+l'APK preview limitato a una sola architettura. `x86` e `x86_64` servono
+solo agli emulatori.
+
+Non insistere su ulteriori ottimizzazioni: il margine è esaurito.
+
+- Il runtime di React Native da solo occupa ~12 MB per architettura
+  (`libreactnative`, `libhermesvm`, `libexpo-modules-core`, `libc++_shared`).
+  È un pavimento, non è comprimibile.
+- **Reanimated non è rimovibile** pur non essendo usato direttamente:
+  NativeWind lo richiede a runtime in `react-native-css-interop` per gli
+  stili di stato, e ogni `active:` nel codice passa da lì.
+- La build di produzione resta un app bundle con tutte le architetture: è
+  Google Play a servire a ogni dispositivo solo quella che gli serve, quindi
+  restringerle lì non gioverebbe all'utente.
+
+Scendere sotto i ~25 MB richiederebbe un cambio di stack, non una
+configurazione diversa.
