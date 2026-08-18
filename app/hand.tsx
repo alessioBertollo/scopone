@@ -52,7 +52,7 @@ export default function HandScreen() {
     () => existing?.napola?.team ?? 'none',
   )
   const [napolaLength, setNapolaLength] = useState(() => existing?.napola?.length ?? 3)
-  const [rebelloTeam, setRebelloTeam] = useState<TeamId>(() => existing?.rebello ?? 'A')
+  const [donnaTeam, setDonnaTeam] = useState<TeamId>(() => existing?.donna ?? 'A')
 
   const hand = useMemo<HandInput>(() => {
     const primiera: PrimieraInput =
@@ -71,8 +71,8 @@ export default function HandScreen() {
     if (rules.napolaEnabled && napolaTeam !== 'none') {
       next.napola = { team: napolaTeam, length: napolaLength }
     }
-    if (rules.rebello) {
-      next.rebello = rebelloTeam
+    if (rules.donnaEnabled) {
+      next.donna = donnaTeam
     }
 
     return next
@@ -87,7 +87,7 @@ export default function HandScreen() {
     scopeB,
     napolaTeam,
     napolaLength,
-    rebelloTeam,
+    donnaTeam,
     rules,
   ])
 
@@ -272,13 +272,13 @@ export default function HandScreen() {
         </Card>
       ) : null}
 
-      {rules.rebello ? (
+      {rules.donnaEnabled ? (
         <Card title="Donna di denari" subtitle="Come il settebello, è sempre di qualcuno.">
           <Segmented
             options={teamOptions}
-            value={rebelloTeam}
-            onChange={setRebelloTeam}
-            testID="rebello"
+            value={donnaTeam}
+            onChange={setDonnaTeam}
+            testID="donna"
           />
         </Card>
       ) : null}

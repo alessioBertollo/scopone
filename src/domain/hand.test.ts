@@ -91,15 +91,15 @@ describe('validateHand', () => {
     expect(codes(issues)).toContain('napola.tooLong')
   })
 
-  it('rifiuta il rebello se la variante non è attiva', () => {
-    const issues = validateHand(makeHand({ rebello: 'B' }), RULES)
-    expect(codes(issues)).toContain('rebello.disabled')
+  it('rifiuta la donna di denari se la variante non è attiva', () => {
+    const issues = validateHand(makeHand({ donna: 'B' }), RULES)
+    expect(codes(issues)).toContain('donna.disabled')
   })
 
   it('pretende la donna di denari quando la variante è attiva', () => {
     // È sempre di qualcuno, come il settebello: lasciarla vuota è un errore.
-    const issues = validateHand(makeHand(), makeRules({ rebello: true }))
-    expect(codes(issues)).toContain('rebello.missing')
+    const issues = validateHand(makeHand(), makeRules({ donnaEnabled: true }))
+    expect(codes(issues)).toContain('donna.missing')
   })
 
   it('rifiuta più scope di quante se ne possano fare in una mano', () => {
@@ -117,13 +117,13 @@ describe('validateHand', () => {
     expect(codes(issues)).not.toContain('scope.total')
   })
 
-  it('rifiuta il rebello a chi non ha denari', () => {
-    const rules = makeRules({ rebello: true })
+  it('rifiuta la donna di denari a chi non ha denari', () => {
+    const rules = makeRules({ donnaEnabled: true })
     const issues = validateHand(
-      makeHand({ denari: { A: 0, B: 10 }, settebello: 'B', rebello: 'A' }),
+      makeHand({ denari: { A: 0, B: 10 }, settebello: 'B', donna: 'A' }),
       rules,
     )
-    expect(codes(issues)).toContain('rebello.noDenari')
+    expect(codes(issues)).toContain('donna.noDenari')
   })
 })
 
@@ -172,10 +172,10 @@ describe('scoreHand', () => {
     expect(awardFor('napola', hand, rules)?.value).toBe(5)
   })
 
-  it('conta il rebello quando la variante è attiva', () => {
-    const rules = makeRules({ rebello: true })
-    const hand = makeHand({ rebello: 'B' })
-    expect(awardFor('rebello', hand, rules)?.value).toBe(1)
+  it('conta la donna di denari quando la variante è attiva', () => {
+    const rules = makeRules({ donnaEnabled: true })
+    const hand = makeHand({ donna: 'B' })
+    expect(awardFor('donna', hand, rules)?.value).toBe(1)
     expect(scoreHand(hand, rules).totals).toEqual({ A: 1, B: 1 })
   })
 

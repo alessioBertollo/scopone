@@ -96,7 +96,7 @@ export default function NewMatchScreen() {
   const [primiera, setPrimiera] = useState<YesNo>('si')
   const [primieraMode, setPrimieraMode] = useState<PrimieraMode>('manual')
   const [napola, setNapola] = useState<YesNo>('no')
-  const [rebello, setRebello] = useState<YesNo>('no')
+  const [donna, setDonna] = useState<YesNo>('no')
 
   const start = () => {
     startMatch(
@@ -108,7 +108,7 @@ export default function NewMatchScreen() {
         primieraEnabled: primiera === 'si',
         primieraMode,
         napolaEnabled: napola === 'si',
-        rebello: rebello === 'si',
+        donnaEnabled: donna === 'si',
       },
     )
     router.push('/match')
@@ -237,12 +237,7 @@ export default function NewMatchScreen() {
           </View>
           <View>
             <Text className="mb-2 text-ink text-sm">Donna di denari</Text>
-            <Segmented
-              options={[...YES_NO]}
-              value={rebello}
-              onChange={setRebello}
-              testID="rebello"
-            />
+            <Segmented options={[...YES_NO]} value={donna} onChange={setDonna} testID="donna" />
           </View>
         </View>
       </Card>

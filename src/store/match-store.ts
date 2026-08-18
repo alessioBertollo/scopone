@@ -68,7 +68,9 @@ export const useMatchStore = create<MatchStore>()(
     }),
     {
       name: MATCH_STORAGE_KEY,
-      version: 1,
+      // v2: la variante del re di denari è diventata la donna, e sia la
+      // regola sia il campo della mano hanno cambiato nome.
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state): PersistedState => ({
         match: state.match,

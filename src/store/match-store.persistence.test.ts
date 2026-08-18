@@ -15,7 +15,7 @@ function savedPayload() {
   return JSON.parse(raw)
 }
 
-function seedSaved(state: unknown, version = 1) {
+function seedSaved(state: unknown, version = 2) {
   seedMockStorage(MATCH_STORAGE_KEY, JSON.stringify({ version, state }))
 }
 
@@ -33,7 +33,7 @@ describe('salvataggio', () => {
     await flush()
 
     const saved = savedPayload()
-    expect(saved.version).toBe(1)
+    expect(saved.version).toBe(2)
     expect(saved.state.hasStarted).toBe(true)
     expect(saved.state.match.teamNames).toEqual({ A: 'Rossi', B: 'Bianchi' })
     expect(saved.state.match.hands).toHaveLength(1)

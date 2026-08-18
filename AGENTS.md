@@ -94,7 +94,7 @@ va in errore appena sincronizza lo schema colori.
 - Chi non ha carte di un seme somma zero per quel seme nella primiera.
 - La partita si chiude solo se una squadra raggiunge il traguardo **e**
   non è in parità con l'altra: a pari punti si gioca un'altra mano.
-- Napola e rebello sono varianti opzionali, disattivate di default.
+- Napola e donna sono varianti opzionali, disattivate di default.
 
 ## Peso dell'app
 

@@ -42,9 +42,10 @@ Assign it by hand if you already know it, or pick the best card in each suit and
 
 YOUR HOUSE RULES
 
-• Games to 11, 16 or 21 points
-• Napola, fixed or progressive
-• Rebello, the king of coins
+• Games to 11 or 21 points, reached or exceeded
+• Napola: ace, two and three of coins score three, plus one per extra consecutive coin
+• Queen of coins
+• Primiera can be switched off, for tables that do not count it
 • Level at the target score? A tie-breaking hand is played
 
 BUILT FOR THE TABLE
@@ -80,6 +81,6 @@ github.com/alessioBertollo/scopone
 ### A note on the terminology
 
 The Italian names are kept untranslated on purpose — *settebello*, *primiera*,
-*napola*, *rebello* have no English equivalents, and anyone searching in English
+*napola* have no English equivalents, and anyone searching in English
 for this game already knows them. "Coins" for *denari* and "sweep" for *scopa*
 are the accepted translations in English-language descriptions of the game.

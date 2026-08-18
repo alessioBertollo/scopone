@@ -18,7 +18,7 @@ In sviluppo, ma già utilizzabile: si può giocare una partita intera e
 riprenderla dopo aver chiuso l'app.
 
 - [x] Motore di punteggio (carte, denari, settebello, primiera, scope)
-- [x] Varianti configurabili (napola, rebello, traguardo a 11/16/21)
+- [x] Varianti configurabili (napola, donna di denari, traguardo a 11 o 21)
 - [x] Validazione delle mani impossibili
 - [x] Interfaccia: nuova partita, tabellone, inserimento e modifica mano
 - [x] Persistenza della partita in corso
@@ -45,11 +45,16 @@ La primiera somma la carta migliore di ogni seme, con valori propri:
 
 Chi non ha preso nessuna carta di un seme somma zero per quel seme.
 
-Varianti opzionali, disattivate di default: **napola** (a valore fisso o
-progressivo) e **rebello** (re di denari).
+Varianti opzionali, disattivate di default:
 
-La partita si chiude quando una squadra raggiunge il traguardo e non è in
-parità con l'avversaria. A pari punti si gioca una mano di spareggio.
+- **Napola** — asso, due e tre di denari valgono tre punti, più uno per ogni
+  denaro consecutivo in più.
+- **Donna di denari** — un punto a chi la prende. Come il settebello, è
+  sempre di qualcuno.
+
+La partita si chiude quando una squadra taglia il traguardo e non è in parità
+con l'avversaria: a pari punti si gioca una mano di spareggio. Il traguardo si
+può impostare a 11 o 21 punti, da raggiungere oppure da superare.
 
 ## Sviluppo
 
@@ -67,29 +72,36 @@ npm run verify
 | `npm run test:coverage` | test con report di copertura |
 | `npm run test:e2e` | flow Maestro su emulatore o simulatore |
 | `npm run icons` | rigenera i PNG delle icone dagli SVG |
+| `npm run lint:fix` | formattazione e fix automatici |
+| `npm start` | avvia il server di sviluppo |
 
 ## Provare l'app sul telefono
 
-Il giro quotidiano usa **Expo Go**, senza attendere build:
+Il giro quotidiano non richiede una build a ogni modifica. Serve installare
+una volta sola una **development build**:
 
-1. Installa Expo Go dal Play Store o dall'App Store
-2. `npm start` sul computer
-3. Inquadra il QR code col telefono
+```bash
+npx eas-cli build --profile development --platform android
+```
 
-L'app si ricarica da sola a ogni salvataggio. Se il telefono e il computer
-sono su una rete che isola i dispositivi fra loro — capita spesso sulle reti
-aziendali — usa `npm run start:tunnel`.
+Poi basta `npm start` sul computer e aprire l'app sul telefono: si collega al
+server e si ricarica da sola a ogni salvataggio.
 
-Expo Go esegue il codice dentro il proprio contenitore: icona, nome e splash
-sono i suoi, non quelli dell'app. Per vedere il prodotto vero serve una build:
+Expo Go sarebbe l'alternativa più immediata, ma segue solo l'SDK più recente e
+sul Play Store non è sempre disponibile nella versione giusta: la development
+build non ha questo problema ed è la tua app vera, con la sua icona e il suo
+nome.
+
+Se telefono e computer sono su reti che si isolano fra loro, il modo più
+rapido è collegare il computer all'hotspot del telefono.
+
+Per vedere il prodotto finito, senza server di sviluppo:
 
 ```bash
 npx eas-cli build --profile preview --platform android
 ```
 
 che produce un APK installabile e condivisibile.
-| `npm run lint:fix` | formattazione e fix automatici |
-| `npm start` | avvia Expo |
 
 ## Architettura
 

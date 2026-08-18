@@ -45,9 +45,10 @@ Puoi assegnarla a mano se la sapete già, oppure scegliere la carta migliore per
 
 LE REGOLE DI CASA TUA
 
-• Partita a 11, 16 o 21 punti
-• Napola, a valore fisso o progressiva
-• Rebello, il re di denari
+• Partita a 11 o 21 punti, da raggiungere o da superare
+• Napola: asso, due e tre di denari valgono tre punti, più uno per ogni denaro consecutivo in più
+• Donna di denari
+• Primiera disattivabile, per chi al tavolo non la conta
 • A pari punti sul traguardo si gioca la mano di spareggio
 
 FATTA PER IL TAVOLO

@@ -30,7 +30,7 @@ export type RuleSet = {
    */
   napolaEnabled: boolean
   /** Variante: la donna di denari vale un punto aggiuntivo. */
-  rebello: boolean
+  donnaEnabled: boolean
   /** Se disattivato, le scope non contano (rarissimo, ma esiste). */
   scopeEnabled: boolean
 }
@@ -41,7 +41,7 @@ export const DEFAULT_RULES: RuleSet = {
   primieraEnabled: true,
   primieraMode: 'manual',
   napolaEnabled: false,
-  rebello: false,
+  donnaEnabled: false,
   scopeEnabled: true,
 }
 
@@ -55,7 +55,7 @@ export const RULE_PRESETS = {
     ...DEFAULT_RULES,
     targetScore: 21,
     napolaEnabled: true,
-    rebello: true,
+    donnaEnabled: true,
   },
 } as const satisfies Record<string, RuleSet>
 

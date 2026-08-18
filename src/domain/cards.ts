@@ -15,8 +15,8 @@ export const CARDS_PER_SUIT = 10
 /** Il settebello è il 7 di denari. */
 export const SETTEBELLO: { suit: Suit; rank: Rank } = { suit: 'denari', rank: 7 }
 
-/** Il rebello (variante) è la donna di denari, cioè il 9. */
-export const REBELLO: { suit: Suit; rank: Rank } = { suit: 'denari', rank: 9 }
+/** La donna di denari, variante opzionale: è il 9, fra fante e re. */
+export const DONNA_DI_DENARI: { suit: Suit; rank: Rank } = { suit: 'denari', rank: 9 }
 
 /**
  * Valori di primiera. Non seguono l'ordine delle carte: il 7 vale più di

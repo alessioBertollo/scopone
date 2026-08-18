@@ -31,7 +31,7 @@ export type HandInput = {
   scope: ByTeam<number>
   napola?: Napola
   /** Chi ha preso la donna di denari: obbligatorio se la variante è attiva. */
-  rebello?: TeamId
+  donna?: TeamId
 }
 
 export type PointKind =
@@ -41,7 +41,7 @@ export type PointKind =
   | 'primiera'
   | 'scope'
   | 'napola'
-  | 'rebello'
+  | 'donna'
 
 export type PointAward = {
   kind: PointKind
@@ -186,22 +186,22 @@ export function validateHand(hand: HandInput, rules: RuleSet): ValidationIssue[]
     }
   }
 
-  if (hand.rebello === undefined) {
-    if (rules.rebello) {
+  if (hand.donna === undefined) {
+    if (rules.donnaEnabled) {
       issues.push({
-        code: 'rebello.missing',
+        code: 'donna.missing',
         message: 'La donna di denari è sempre di qualcuno: va assegnata',
       })
     }
-  } else if (!rules.rebello) {
+  } else if (!rules.donnaEnabled) {
     issues.push({
-      code: 'rebello.disabled',
+      code: 'donna.disabled',
       message: 'La donna di denari è stata inserita ma non è attiva nelle regole',
     })
-  } else if (hand.denari[hand.rebello] < 1) {
+  } else if (hand.denari[hand.donna] < 1) {
     issues.push({
-      code: 'rebello.noDenari',
-      message: `La squadra ${hand.rebello} non ha denari, non può avere la donna di denari`,
+      code: 'donna.noDenari',
+      message: `La squadra ${hand.donna} non ha denari, non può avere la donna di denari`,
     })
   }
 
@@ -269,8 +269,8 @@ export function scoreHand(hand: HandInput, rules: RuleSet): HandScore {
     })
   }
 
-  if (rules.rebello && hand.rebello !== undefined) {
-    awards.push({ kind: 'rebello', winner: hand.rebello, value: 1 })
+  if (rules.donnaEnabled && hand.donna !== undefined) {
+    awards.push({ kind: 'donna', winner: hand.donna, value: 1 })
   }
 
   const totals: ByTeam<number> = { A: 0, B: 0 }

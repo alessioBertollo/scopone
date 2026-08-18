@@ -16,7 +16,7 @@ const POINT_LABEL: Record<PointKind, string> = {
   primiera: 'Primiera',
   scope: 'Scope',
   napola: 'Napola',
-  rebello: 'Rebello',
+  donna: 'Donna',
 }
 
 function TeamTotal({
