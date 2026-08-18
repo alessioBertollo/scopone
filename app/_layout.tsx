@@ -15,8 +15,12 @@ export default function RootLayout() {
       {hydrated ? (
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="new-match" />
           <Stack.Screen name="match" />
           <Stack.Screen name="hand" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="league/new" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="league/[id]" />
         </Stack>
       ) : (
         // Schermo pieno del colore di sfondo: evita il lampo bianco mentre

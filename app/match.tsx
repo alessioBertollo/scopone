@@ -140,7 +140,7 @@ export default function MatchScreen() {
             <Button
               label="Nuova partita"
               testID="nuova-partita"
-              onPress={() => router.replace('/')}
+              onPress={() => router.replace('/new-match')}
             />
           ) : (
             <Button

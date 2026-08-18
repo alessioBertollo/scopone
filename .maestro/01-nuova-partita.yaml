@@ -11,6 +11,10 @@ tags:
 - assertNotVisible:
     id: 'riprendi-partita'
 
+# La creazione partita non è più la schermata di avvio: si passa dalla home.
+- tapOn:
+    id: 'nuova-partita'
+
 - tapOn:
     id: 'nome-squadra-a'
 - eraseText

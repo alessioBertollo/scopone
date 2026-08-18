@@ -72,6 +72,11 @@ export const useMatchStore = create<MatchStore>()(
       // regola sia il campo della mano hanno cambiato nome.
       version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      // Scartare esplicitamente: senza questa funzione zustand butta comunque
+      // il salvataggio vecchio, ma segnalandolo come errore. Una partita
+      // salvata con lo schema precedente non è convertibile, e ripartire
+      // puliti è meglio che rileggerla a metà.
+      migrate: () => ({ match: EMPTY_MATCH, hasStarted: false }),
       partialize: (state): PersistedState => ({
         match: state.match,
         hasStarted: state.hasStarted,

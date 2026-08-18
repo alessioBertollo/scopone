@@ -4,6 +4,8 @@ name: Calcolo della primiera dalle carte
 - launchApp:
     clearState: true
 - tapOn:
+    id: 'nuova-partita'
+- tapOn:
     id: 'inizia-partita'
 - tapOn:
     id: 'aggiungi-mano'

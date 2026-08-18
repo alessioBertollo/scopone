@@ -7,6 +7,9 @@ tags:
     clearState: true
 
 - tapOn:
+    id: 'nuova-partita'
+
+- tapOn:
     id: 'nome-squadra-a'
 - eraseText
 - inputText: 'Rossi'
@@ -30,6 +33,7 @@ tags:
 - stopApp
 - launchApp
 
+# La partita in sospeso compare in cima alla home.
 - assertVisible:
     id: 'riprendi-partita'
 - tapOn:
