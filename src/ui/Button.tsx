@@ -49,7 +49,9 @@ export function Button({
         className,
       )}
     >
-      <Text className={cn('font-semibold text-base', LABEL[variant])}>{label}</Text>
+      <Text numberOfLines={1} className={cn('font-semibold text-base', LABEL[variant])}>
+        {label}
+      </Text>
     </Pressable>
   )
 }

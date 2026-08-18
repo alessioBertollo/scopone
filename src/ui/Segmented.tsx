@@ -20,16 +20,18 @@ type SegmentedProps<T extends string> = {
   testID?: string
 }
 
+// L'opzione scelta ha uno sfondo pieno e testo bianco: su carta avorio il
+// vecchio bianco-su-beige si distingueva appena.
 const SELECTED_BG: Record<SegmentTone, string> = {
   a: 'bg-team-a',
   b: 'bg-team-b',
-  neutral: 'bg-surface',
+  neutral: 'bg-felt',
 }
 
 const SELECTED_TEXT: Record<SegmentTone, string> = {
   a: 'text-white',
   b: 'text-white',
-  neutral: 'text-ink',
+  neutral: 'text-white',
 }
 
 export function Segmented<T extends string>({
@@ -39,7 +41,7 @@ export function Segmented<T extends string>({
   testID,
 }: SegmentedProps<T>) {
   return (
-    <View className="flex-row rounded-2xl bg-sunken p-1">
+    <View className="flex-row rounded-2xl border border-line bg-sunken p-1">
       {options.map((option) => {
         const selected = option.value === value
         const tone = option.tone ?? 'neutral'
@@ -59,8 +61,9 @@ export function Segmented<T extends string>({
             <Text
               numberOfLines={1}
               className={cn(
-                'font-medium text-sm',
-                selected ? SELECTED_TEXT[tone] : 'text-muted',
+                'text-sm',
+                selected ? 'font-semibold' : 'font-medium',
+                selected ? SELECTED_TEXT[tone] : 'text-ink/70',
               )}
             >
               {option.label}

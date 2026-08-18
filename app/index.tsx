@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Text, TextInput, View } from 'react-native'
-import { DEFAULT_RULES, type NapolaRule, type WinRule } from '../src/domain/rules'
+import { DEFAULT_RULES, type PrimieraMode, type WinRule } from '../src/domain/rules'
 import { useMatchState } from '../src/store/hooks'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
@@ -15,16 +15,14 @@ const PLACEHOLDER_COLOR = '#8A8580'
 
 const TARGETS = [
   { value: '11', label: '11 punti' },
-  { value: '16', label: '16 punti' },
   { value: '21', label: '21 punti' },
 ] as const
 
 type TargetValue = (typeof TARGETS)[number]['value']
 
-const NAPOLA_OPTIONS: { value: NapolaRule; label: string }[] = [
-  { value: 'off', label: 'No' },
-  { value: 'fixed', label: '3 punti' },
-  { value: 'progressive', label: 'Progressiva' },
+const PRIMIERA_MODES: { value: PrimieraMode; label: string }[] = [
+  { value: 'manual', label: 'La sappiamo noi' },
+  { value: 'cards', label: "La calcola l'app" },
 ]
 
 const YES_NO = [
@@ -96,7 +94,8 @@ export default function NewMatchScreen() {
   const [target, setTarget] = useState<TargetValue>('21')
   const [winRule, setWinRule] = useState<WinRule>('reach')
   const [primiera, setPrimiera] = useState<YesNo>('si')
-  const [napola, setNapola] = useState<NapolaRule>('off')
+  const [primieraMode, setPrimieraMode] = useState<PrimieraMode>('manual')
+  const [napola, setNapola] = useState<YesNo>('no')
   const [rebello, setRebello] = useState<YesNo>('no')
 
   const start = () => {
@@ -107,7 +106,8 @@ export default function NewMatchScreen() {
         targetScore: Number(target),
         winRule,
         primieraEnabled: primiera === 'si',
-        napola,
+        primieraMode,
+        napolaEnabled: napola === 'si',
         rebello: rebello === 'si',
       },
     )
@@ -124,7 +124,7 @@ export default function NewMatchScreen() {
             <Button
               label={
                 saved.status === 'finished'
-                  ? `Rivedi l'ultima partita · ${savedLabel}`
+                  ? `Rivedi · ${savedLabel}`
                   : `Riprendi · ${savedLabel}`
               }
               variant="ghost"
@@ -205,19 +205,38 @@ export default function NewMatchScreen() {
               <Text className="mt-1.5 text-muted text-xs">
                 Ogni mano assegnerà tre punti base invece di quattro.
               </Text>
-            ) : null}
+            ) : (
+              <View className="mt-3">
+                <Text className="mb-2 text-ink text-sm">Come la inserite</Text>
+                <Segmented
+                  options={PRIMIERA_MODES}
+                  value={primieraMode}
+                  onChange={setPrimieraMode}
+                  testID="primiera-modo"
+                />
+                <Text className="mt-1.5 text-muted text-xs">
+                  {primieraMode === 'manual'
+                    ? 'A fine mano scegli solo chi l’ha vinta.'
+                    : 'A fine mano indichi la carta migliore di ogni seme e l’app fa il conto.'}
+                </Text>
+              </View>
+            )}
           </View>
           <View>
             <Text className="mb-2 text-ink text-sm">Napola</Text>
             <Segmented
-              options={NAPOLA_OPTIONS}
+              options={[...YES_NO]}
               value={napola}
               onChange={setNapola}
               testID="napola"
             />
+            <Text className="mt-1.5 text-muted text-xs">
+              Asso, due e tre di denari valgono tre punti, più uno per ogni denaro consecutivo
+              in più.
+            </Text>
           </View>
           <View>
-            <Text className="mb-2 text-ink text-sm">Rebello (re di denari)</Text>
+            <Text className="mb-2 text-ink text-sm">Donna di denari</Text>
             <Segmented
               options={[...YES_NO]}
               value={rebello}

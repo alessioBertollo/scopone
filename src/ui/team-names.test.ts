@@ -12,8 +12,8 @@ describe('suggestTeamNames', () => {
   })
 
   it('sceglie la coppia in base al numero casuale', () => {
-    expect(suggestTeamNames(() => 0)).toEqual({ A: 'Bastoni', B: 'Spade' })
-    expect(suggestTeamNames(() => 0.999)).toEqual({ A: 'Monti', B: 'Valli' })
+    expect(suggestTeamNames(() => 0)).toEqual({ A: 'Sereni', B: 'Nervosi' })
+    expect(suggestTeamNames(() => 0.999)).toEqual({ A: 'Convinti', B: 'Dubbiosi' })
   })
 
   it('regge un generatore che restituisce esattamente 1', () => {

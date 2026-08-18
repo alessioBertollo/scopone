@@ -55,7 +55,7 @@ describe('rankLabel', () => {
   it('usa i nomi italiani per asso e figure', () => {
     expect(rankLabel(1)).toBe('Asso')
     expect(rankLabel(8)).toBe('Fante')
-    expect(rankLabel(9)).toBe('Cavallo')
+    expect(rankLabel(9)).toBe('Donna')
     expect(rankLabel(10)).toBe('Re')
   })
 

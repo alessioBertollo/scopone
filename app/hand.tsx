@@ -37,9 +37,7 @@ export default function HandScreen() {
   const [denariA, setDenariA] = useState(() => existing?.denari.A ?? 5)
   const [settebello, setSettebello] = useState<TeamId>(() => existing?.settebello ?? 'A')
 
-  const [primieraMode, setPrimieraMode] = useState<'manual' | 'cards'>(
-    () => existing?.primiera.mode ?? 'manual',
-  )
+  const primieraMode = rules.primieraMode
   const [primieraChoice, setPrimieraChoice] = useState<PrimieraChoice>(() =>
     existing?.primiera.mode === 'manual' ? (existing.primiera.winner ?? 'pari') : 'pari',
   )
@@ -72,7 +70,7 @@ export default function HandScreen() {
       scope: { A: scopeA, B: scopeB },
     }
 
-    if (rules.napola !== 'off' && napolaTeam !== 'none') {
+    if (rules.napolaEnabled && napolaTeam !== 'none') {
       next.napola = { team: napolaTeam, length: napolaLength }
     }
     if (rules.rebello && rebelloTeam !== 'none') {
@@ -212,36 +210,24 @@ export default function HandScreen() {
 
       {rules.primieraEnabled ? (
         <Card title="Primiera">
-          <View className="gap-3">
+          {primieraMode === 'manual' ? (
             <Segmented
               options={[
-                { value: 'manual', label: 'La so già' },
-                { value: 'cards', label: 'Calcolala tu' },
+                { value: 'A' as const, label: teamNames.A, tone: 'a' as const },
+                { value: 'pari' as const, label: 'Pari', tone: 'neutral' as const },
+                { value: 'B' as const, label: teamNames.B, tone: 'b' as const },
               ]}
-              value={primieraMode}
-              onChange={setPrimieraMode}
-              testID="primiera-modo"
+              value={primieraChoice}
+              onChange={setPrimieraChoice}
+              testID="primiera"
             />
-
-            {primieraMode === 'manual' ? (
-              <Segmented
-                options={[
-                  { value: 'A' as const, label: teamNames.A, tone: 'a' as const },
-                  { value: 'pari' as const, label: 'Pari', tone: 'neutral' as const },
-                  { value: 'B' as const, label: teamNames.B, tone: 'b' as const },
-                ]}
-                value={primieraChoice}
-                onChange={setPrimieraChoice}
-                testID="primiera"
-              />
-            ) : (
-              <PrimieraCardsInput
-                best={primieraBest}
-                teamNames={teamNames}
-                onChange={setPrimieraBest}
-              />
-            )}
-          </View>
+          ) : (
+            <PrimieraCardsInput
+              best={primieraBest}
+              teamNames={teamNames}
+              onChange={setPrimieraBest}
+            />
+          )}
         </Card>
       ) : null}
 
@@ -264,7 +250,7 @@ export default function HandScreen() {
         />
       </Card>
 
-      {rules.napola !== 'off' ? (
+      {rules.napolaEnabled ? (
         <Card title="Napola" subtitle="Asso, 2, 3 di denari e a seguire.">
           <View className="gap-3">
             <Segmented
@@ -286,7 +272,7 @@ export default function HandScreen() {
       ) : null}
 
       {rules.rebello ? (
-        <Card title="Rebello" subtitle="Il re di denari.">
+        <Card title="Donna di denari">
           <Segmented
             options={optionalTeamOptions}
             value={rebelloTeam}

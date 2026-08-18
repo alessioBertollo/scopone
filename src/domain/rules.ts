@@ -2,13 +2,6 @@
  * Le regole dello scopone cambiano da regione a regione e da tavolo a tavolo.
  * Tutto ciò che non è universale sta qui ed è configurabile.
  */
-export type NapolaRule =
-  /** Napola non conteggiata. */
-  | 'off'
-  /** Vale sempre lo stesso numero di punti, indipendentemente dalla lunghezza. */
-  | 'fixed'
-  /** Vale un punto per carta della sequenza: asso-2-3 = 3, asso-2-3-4 = 4, ecc. */
-  | 'progressive'
 
 export type WinRule =
   /** Vince chi raggiunge il traguardo: a 21 su 21 la partita è chiusa. */
@@ -16,18 +9,27 @@ export type WinRule =
   /** Vince chi lo supera: a 21 esatti si continua, servono almeno 22. */
   | 'exceed'
 
+export type PrimieraMode =
+  /** L'utente sa già chi ha vinto la primiera e la assegna a mano. */
+  | 'manual'
+  /** L'app la calcola dalla carta migliore di ogni seme. */
+  | 'cards'
+
 export type RuleSet = {
-  /** Punti necessari per vincere la partita (tipicamente 11, 16 o 21). */
+  /** Punti necessari per vincere la partita (tipicamente 11 o 21). */
   targetScore: number
   /** Se il traguardo va raggiunto o superato. */
   winRule: WinRule
-  /** Alcuni tavoli non contano la primiera: è la variante più diffusa. */
+  /** Alcuni tavoli non contano la primiera. */
   primieraEnabled: boolean
-  /** Come conteggiare la napola (asso, 2, 3... di denari consecutivi). */
-  napola: NapolaRule
-  /** Punti della napola quando `napola` è 'fixed'. */
-  napolaFixedValue: number
-  /** Variante: il re di denari vale un punto aggiuntivo. */
+  /** Come si inserisce la primiera a fine mano: è una preferenza del tavolo. */
+  primieraMode: PrimieraMode
+  /**
+   * Napola: asso, due e tre di denari nella stessa presa. Vale tre punti, uno
+   * per carta, e cresce di uno per ogni denaro consecutivo in più.
+   */
+  napolaEnabled: boolean
+  /** Variante: la donna di denari vale un punto aggiuntivo. */
   rebello: boolean
   /** Se disattivato, le scope non contano (rarissimo, ma esiste). */
   scopeEnabled: boolean
@@ -37,8 +39,8 @@ export const DEFAULT_RULES: RuleSet = {
   targetScore: 21,
   winRule: 'reach',
   primieraEnabled: true,
-  napola: 'off',
-  napolaFixedValue: 3,
+  primieraMode: 'manual',
+  napolaEnabled: false,
   rebello: false,
   scopeEnabled: true,
 }
@@ -48,11 +50,11 @@ export const RULE_PRESETS = {
   scientifico: { ...DEFAULT_RULES, targetScore: 21 },
   /** Scopa classica, partita corta. */
   scopa: { ...DEFAULT_RULES, targetScore: 11 },
-  /** Variante con napola progressiva e rebello. */
+  /** Variante con napola e donna di denari. */
   napoletana: {
     ...DEFAULT_RULES,
     targetScore: 21,
-    napola: 'progressive',
+    napolaEnabled: true,
     rebello: true,
   },
 } as const satisfies Record<string, RuleSet>

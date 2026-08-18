@@ -1,19 +1,21 @@
 import type { ByTeam } from '../domain/teams'
 
 /**
- * Coppie di nomi suggeriti per le due squadre. Sono coppie e non nomi
- * indipendenti perché "Nord" contro "Coppe" non vuol dire niente: il senso
- * sta nell'opposizione fra i due.
+ * Coppie di stati d'animo contrapposti, suggerite come nomi delle squadre.
+ * Sono coppie e non nomi indipendenti: il senso sta nell'opposizione fra i
+ * due, e "Sereni" contro "Fiduciosi" non farebbe ridere nessuno.
  */
 const PAIRS: ReadonlyArray<readonly [string, string]> = [
-  ['Bastoni', 'Spade'],
-  ['Denari', 'Coppe'],
-  ['Nord', 'Sud'],
-  ['Est', 'Ovest'],
-  ['Rossi', 'Bianchi'],
-  ['Assi', 'Figure'],
-  ['Verdi', 'Gialli'],
-  ['Monti', 'Valli'],
+  ['Sereni', 'Nervosi'],
+  ['Ottimisti', 'Pessimisti'],
+  ['Euforici', 'Rassegnati'],
+  ['Tranquilli', 'Agitati'],
+  ['Fiduciosi', 'Diffidenti'],
+  ['Allegri', 'Musoni'],
+  ['Spavaldi', 'Timorosi'],
+  ['Rilassati', 'Tesi'],
+  ['Impavidi', 'Preoccupati'],
+  ['Convinti', 'Dubbiosi'],
 ]
 
 /**

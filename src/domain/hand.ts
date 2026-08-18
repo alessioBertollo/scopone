@@ -23,7 +23,7 @@ export type HandInput = {
   primiera: PrimieraInput
   scope: ByTeam<number>
   napola?: Napola
-  /** Chi ha preso il re di denari, se la variante è attiva. */
+  /** Chi ha preso la donna di denari, se la variante è attiva. */
   rebello?: TeamId
 }
 
@@ -147,7 +147,7 @@ export function validateHand(hand: HandInput, rules: RuleSet): ValidationIssue[]
   }
 
   if (hand.napola) {
-    if (rules.napola === 'off') {
+    if (!rules.napolaEnabled) {
       issues.push({
         code: 'napola.disabled',
         message: 'La napola è stata inserita ma non è attiva nelle regole',
@@ -189,11 +189,11 @@ export function validateHand(hand: HandInput, rules: RuleSet): ValidationIssue[]
 }
 
 /**
- * `validateHand` rifiuta una napola quando la regola è disattivata, quindi
- * qui restano solo i due modi di conteggiarla.
+ * La napola vale un punto per carta: asso, due e tre di denari fanno tre
+ * punti, e ogni denaro consecutivo in più ne aggiunge uno.
  */
-function napolaPoints(napola: Napola, rules: RuleSet): number {
-  return rules.napola === 'progressive' ? napola.length : rules.napolaFixedValue
+function napolaPoints(napola: Napola): number {
+  return napola.length
 }
 
 /**
@@ -244,7 +244,7 @@ export function scoreHand(hand: HandInput, rules: RuleSet): HandScore {
     awards.push({
       kind: 'napola',
       winner: hand.napola.team,
-      value: napolaPoints(hand.napola, rules),
+      value: napolaPoints(hand.napola),
       detail: `${hand.napola.length} carte`,
     })
   }

@@ -15,8 +15,8 @@ export const CARDS_PER_SUIT = 10
 /** Il settebello è il 7 di denari. */
 export const SETTEBELLO: { suit: Suit; rank: Rank } = { suit: 'denari', rank: 7 }
 
-/** Il rebello (variante) è il re di denari, cioè il 10. */
-export const REBELLO: { suit: Suit; rank: Rank } = { suit: 'denari', rank: 10 }
+/** Il rebello (variante) è la donna di denari, cioè il 9. */
+export const REBELLO: { suit: Suit; rank: Rank } = { suit: 'denari', rank: 9 }
 
 /**
  * Valori di primiera. Non seguono l'ordine delle carte: il 7 vale più di
@@ -51,7 +51,7 @@ export function rankLabel(rank: Rank): string {
     case 8:
       return 'Fante'
     case 9:
-      return 'Cavallo'
+      return 'Donna'
     case 10:
       return 'Re'
     default:

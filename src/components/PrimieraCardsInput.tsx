@@ -19,7 +19,7 @@ function shortRank(rank: Rank): string {
     case 8:
       return 'F'
     case 9:
-      return 'C'
+      return 'D'
     case 10:
       return 'R'
     default:

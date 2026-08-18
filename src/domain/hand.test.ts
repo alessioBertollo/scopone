@@ -68,13 +68,13 @@ describe('validateHand', () => {
   })
 
   it('rifiuta una napola più corta di tre carte', () => {
-    const rules = makeRules({ napola: 'progressive' })
+    const rules = makeRules({ napolaEnabled: true })
     const issues = validateHand(makeHand({ napola: { team: 'A', length: 2 } }), rules)
     expect(codes(issues)).toContain('napola.tooShort')
   })
 
   it('rifiuta una napola più lunga dei denari posseduti', () => {
-    const rules = makeRules({ napola: 'progressive' })
+    const rules = makeRules({ napolaEnabled: true })
     const issues = validateHand(
       makeHand({ denari: { A: 3, B: 7 }, napola: { team: 'A', length: 5 } }),
       rules,
@@ -83,7 +83,7 @@ describe('validateHand', () => {
   })
 
   it('rifiuta una napola più lunga dei dieci denari esistenti', () => {
-    const rules = makeRules({ napola: 'progressive' })
+    const rules = makeRules({ napolaEnabled: true })
     const issues = validateHand(
       makeHand({ denari: { A: 10, B: 0 }, napola: { team: 'A', length: 11 } }),
       rules,
@@ -138,14 +138,15 @@ describe('scoreHand', () => {
     expect(score.totals).toEqual({ A: 1, B: 0 })
   })
 
-  it('conta la napola a valore fisso', () => {
-    const rules = makeRules({ napola: 'fixed', napolaFixedValue: 3 })
-    const hand = makeHand({ denari: { A: 6, B: 4 }, napola: { team: 'A', length: 5 } })
+  it('conta la napola minima tre punti', () => {
+    const rules = makeRules({ napolaEnabled: true })
+    // Asso, due e tre di denari: la sequenza più corta possibile.
+    const hand = makeHand({ denari: { A: 6, B: 4 }, napola: { team: 'A', length: 3 } })
     expect(awardFor('napola', hand, rules)?.value).toBe(3)
   })
 
-  it('conta la napola progressiva in base alla lunghezza', () => {
-    const rules = makeRules({ napola: 'progressive' })
+  it('aggiunge un punto per ogni denaro consecutivo oltre il terzo', () => {
+    const rules = makeRules({ napolaEnabled: true })
     const hand = makeHand({ denari: { A: 6, B: 4 }, napola: { team: 'A', length: 5 } })
     expect(awardFor('napola', hand, rules)?.value).toBe(5)
   })
