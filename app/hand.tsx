@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { PrimieraCardsInput } from '../src/components/PrimieraCardsInput'
 import { CARDS_PER_SUIT, DECK_SIZE } from '../src/domain/cards'
-import { type HandInput, scoreHand, validateHand } from '../src/domain/hand'
+import { type HandInput, MAX_SCOPE_PER_HAND, scoreHand, validateHand } from '../src/domain/hand'
 import type { BestBySuit, PrimieraInput } from '../src/domain/primiera'
 import type { ByTeam, TeamId } from '../src/domain/teams'
 import { useMatchStore } from '../src/store/match-store'
@@ -52,9 +52,7 @@ export default function HandScreen() {
     () => existing?.napola?.team ?? 'none',
   )
   const [napolaLength, setNapolaLength] = useState(() => existing?.napola?.length ?? 3)
-  const [rebelloTeam, setRebelloTeam] = useState<OptionalTeam>(
-    () => existing?.rebello ?? 'none',
-  )
+  const [rebelloTeam, setRebelloTeam] = useState<TeamId>(() => existing?.rebello ?? 'A')
 
   const hand = useMemo<HandInput>(() => {
     const primiera: PrimieraInput =
@@ -73,7 +71,7 @@ export default function HandScreen() {
     if (rules.napolaEnabled && napolaTeam !== 'none') {
       next.napola = { team: napolaTeam, length: napolaLength }
     }
-    if (rules.rebello && rebelloTeam !== 'none') {
+    if (rules.rebello) {
       next.rebello = rebelloTeam
     }
 
@@ -231,14 +229,17 @@ export default function HandScreen() {
         </Card>
       ) : null}
 
-      <Card title="Scope">
+      <Card
+        title="Scope"
+        subtitle={`In una mano se ne possono fare al massimo ${MAX_SCOPE_PER_HAND} in tutto.`}
+      >
         <Stepper
           label={teamNames.A}
           tone="a"
           testID="scope-a"
           value={scopeA}
           onChange={setScopeA}
-          max={20}
+          max={MAX_SCOPE_PER_HAND - scopeB}
         />
         <Stepper
           label={teamNames.B}
@@ -246,7 +247,7 @@ export default function HandScreen() {
           testID="scope-b"
           value={scopeB}
           onChange={setScopeB}
-          max={20}
+          max={MAX_SCOPE_PER_HAND - scopeA}
         />
       </Card>
 
@@ -272,11 +273,12 @@ export default function HandScreen() {
       ) : null}
 
       {rules.rebello ? (
-        <Card title="Donna di denari">
+        <Card title="Donna di denari" subtitle="Come il settebello, è sempre di qualcuno.">
           <Segmented
-            options={optionalTeamOptions}
+            options={teamOptions}
             value={rebelloTeam}
             onChange={setRebelloTeam}
+            testID="rebello"
           />
         </Card>
       ) : null}

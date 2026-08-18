@@ -96,6 +96,27 @@ describe('validateHand', () => {
     expect(codes(issues)).toContain('rebello.disabled')
   })
 
+  it('pretende la donna di denari quando la variante è attiva', () => {
+    // È sempre di qualcuno, come il settebello: lasciarla vuota è un errore.
+    const issues = validateHand(makeHand(), makeRules({ rebello: true }))
+    expect(codes(issues)).toContain('rebello.missing')
+  })
+
+  it('rifiuta più scope di quante se ne possano fare in una mano', () => {
+    const issues = validateHand(makeHand({ scope: { A: 10, B: 9 } }), RULES)
+    expect(codes(issues)).toContain('scope.total')
+  })
+
+  it('accetta il numero massimo di scope', () => {
+    expect(validateHand(makeHand({ scope: { A: 12, B: 6 } }), RULES)).toEqual([])
+  })
+
+  it('non conta il tetto delle scope se le scope sono disattivate', () => {
+    const rules = makeRules({ scopeEnabled: false })
+    const issues = validateHand(makeHand({ scope: { A: 15, B: 15 } }), rules)
+    expect(codes(issues)).not.toContain('scope.total')
+  })
+
   it('rifiuta il rebello a chi non ha denari', () => {
     const rules = makeRules({ rebello: true })
     const issues = validateHand(

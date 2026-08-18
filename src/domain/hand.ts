@@ -6,6 +6,13 @@ import { type ByTeam, higherOf, TEAMS, type TeamId } from './teams'
 /** La napola richiede almeno asso, 2 e 3 di denari nella stessa presa. */
 export const MIN_NAPOLA_LENGTH = 3
 
+/**
+ * Scope massime in una mano, contando entrambe le squadre. Dopo una scopa il
+ * tavolo è vuoto e chi gioca dopo è costretto a calare, quindi non se ne
+ * possono fare due di fila: il tetto è molto sotto il numero di giocate.
+ */
+export const MAX_SCOPE_PER_HAND = 18
+
 export type Napola = {
   team: TeamId
   /** Lunghezza della sequenza a partire dall'asso di denari. */
@@ -23,7 +30,7 @@ export type HandInput = {
   primiera: PrimieraInput
   scope: ByTeam<number>
   napola?: Napola
-  /** Chi ha preso la donna di denari, se la variante è attiva. */
+  /** Chi ha preso la donna di denari: obbligatorio se la variante è attiva. */
   rebello?: TeamId
 }
 
@@ -117,6 +124,14 @@ export function validateHand(hand: HandInput, rules: RuleSet): ValidationIssue[]
     })
   }
 
+  const totalScope = hand.scope.A + hand.scope.B
+  if (rules.scopeEnabled && totalScope > MAX_SCOPE_PER_HAND) {
+    issues.push({
+      code: 'scope.total',
+      message: `In una mano non si possono fare più di ${MAX_SCOPE_PER_HAND} scope in tutto, non ${totalScope}`,
+    })
+  }
+
   for (const team of TEAMS) {
     if (hand.denari[team] > hand.cards[team]) {
       issues.push({
@@ -171,18 +186,23 @@ export function validateHand(hand: HandInput, rules: RuleSet): ValidationIssue[]
     }
   }
 
-  if (hand.rebello !== undefined) {
-    if (!rules.rebello) {
+  if (hand.rebello === undefined) {
+    if (rules.rebello) {
       issues.push({
-        code: 'rebello.disabled',
-        message: 'Il rebello è stato inserito ma non è attivo nelle regole',
-      })
-    } else if (hand.denari[hand.rebello] < 1) {
-      issues.push({
-        code: 'rebello.noDenari',
-        message: `La squadra ${hand.rebello} non ha denari, non può avere il rebello`,
+        code: 'rebello.missing',
+        message: 'La donna di denari è sempre di qualcuno: va assegnata',
       })
     }
+  } else if (!rules.rebello) {
+    issues.push({
+      code: 'rebello.disabled',
+      message: 'La donna di denari è stata inserita ma non è attiva nelle regole',
+    })
+  } else if (hand.denari[hand.rebello] < 1) {
+    issues.push({
+      code: 'rebello.noDenari',
+      message: `La squadra ${hand.rebello} non ha denari, non può avere la donna di denari`,
+    })
   }
 
   return issues
