@@ -1,0 +1,214 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { makeHand, makeRules } from '../test/factories'
+
+/**
+ * Stesso impianto di `auth-store.test.ts`: le variabili d'ambiente vanno
+ * scritte prima dell'import di `supabase.ts`, che le legge una volta sola,
+ * quindi tutto sta in `vi.hoisted`.
+ */
+const backend = vi.hoisted(() => {
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://prova.supabase.co'
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'chiave-anonima-di-prova'
+
+  type Reply = { data: unknown; error: unknown }
+
+  const state = {
+    userId: 'io' as string | null,
+    row: null as Record<string, unknown> | null,
+    rows: [] as Record<string, unknown>[],
+    error: null as unknown,
+    /** Righe passate a insert, per verificare cosa scriviamo davvero. */
+    inserted: [] as { table: string; values: unknown }[],
+    updated: [] as unknown[],
+  }
+
+  function reset(): void {
+    state.userId = 'io'
+    state.row = null
+    state.rows = []
+    state.error = null
+    state.inserted = []
+    state.updated = []
+  }
+
+  function table(name: string) {
+    const builder = {
+      select: () => builder,
+      eq: () => builder,
+      order: () => builder,
+      limit: async (): Promise<Reply> => ({
+        data: state.error ? null : state.rows,
+        error: state.error,
+      }),
+      insert: (values: unknown) => {
+        state.inserted.push({ table: name, values })
+        // `match_players` non richiede select: l'errore torna subito.
+        const withSelect = {
+          select: () => withSelect,
+          single: async (): Promise<Reply> => ({
+            data: state.error ? null : state.row,
+            error: state.error,
+          }),
+        }
+        return Object.assign(Promise.resolve({ data: null, error: state.error }), withSelect)
+      },
+      update: (values: unknown) => {
+        state.updated.push(values)
+        return builder
+      },
+      single: async (): Promise<Reply> => ({
+        data: state.error ? null : state.row,
+        error: state.error,
+      }),
+    }
+    return builder
+  }
+
+  const client = {
+    auth: {
+      // Chiamate da `supabase.ts` alla creazione del client.
+      startAutoRefresh: () => {},
+      stopAutoRefresh: () => {},
+      getSession: async () => ({
+        data: { session: state.userId ? { user: { id: state.userId } } : null },
+        error: null,
+      }),
+    },
+    from: (name: string) => table(name),
+  }
+
+  return { state, reset, client }
+})
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => backend.client,
+}))
+
+// `supabase.ts` importa AppState, che è scritto in Flow e non è analizzabile qui.
+vi.mock('react-native', () => ({
+  AppState: { currentState: 'active', addEventListener: () => ({ remove: () => {} }) },
+}))
+
+const { createRemoteMatch, listLeagueMatches, saveHands, summarise } = await import('./matches')
+
+const RULES = makeRules()
+
+function row(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'partita-1',
+    league_id: 'lega-1',
+    created_by: 'io',
+    rules: RULES,
+    team_names: { A: 'Allegri', B: 'Musoni' },
+    hands: [],
+    status: 'ongoing',
+    created_at: '2026-08-18T20:00:00Z',
+    updated_at: '2026-08-18T20:00:00Z',
+    ...overrides,
+  }
+}
+
+beforeEach(() => backend.reset())
+
+describe('createRemoteMatch', () => {
+  it('registra la formazione, che è ciò che rende possibili le classifiche', async () => {
+    backend.state.row = row()
+
+    await createRemoteMatch({
+      leagueId: 'lega-1',
+      rules: RULES,
+      teamNames: { A: 'Allegri', B: 'Musoni' },
+      lineup: [
+        { profileId: 'io', team: 'A' },
+        { profileId: 'tu', team: 'B' },
+      ],
+    })
+
+    const formazione = backend.state.inserted.find((i) => i.table === 'match_players')
+    expect(formazione?.values).toEqual([
+      { match_id: 'partita-1', profile_id: 'io', team: 'A' },
+      { match_id: 'partita-1', profile_id: 'tu', team: 'B' },
+    ])
+  })
+
+  it('accetta una partita senza formazione, fuori da ogni lega', async () => {
+    backend.state.row = row({ league_id: null })
+
+    const created = await createRemoteMatch({
+      leagueId: null,
+      rules: RULES,
+      teamNames: { A: 'Allegri', B: 'Musoni' },
+    })
+
+    expect(created.leagueId).toBeNull()
+    expect(backend.state.inserted.some((i) => i.table === 'match_players')).toBe(false)
+  })
+
+  it('rifiuta chi non ha una sessione', async () => {
+    backend.state.userId = null
+    await expect(
+      createRemoteMatch({ leagueId: null, rules: RULES, teamNames: { A: 'A', B: 'B' } }),
+    ).rejects.toThrow(/accedere/i)
+  })
+})
+
+describe('permessi', () => {
+  it('marca modificabile solo la partita di chi guarda', async () => {
+    backend.state.row = row({ created_by: 'io' })
+    const mia = await saveHands('partita-1', [])
+    expect(mia.canEdit).toBe(true)
+
+    backend.state.row = row({ created_by: 'qualcun-altro' })
+    const altrui = await saveHands('partita-1', [])
+    expect(altrui.canEdit).toBe(false)
+  })
+
+  it('traduce il rifiuto della policy in un messaggio comprensibile', async () => {
+    backend.state.error = {
+      code: '42501',
+      message: 'new row violates row-level security policy',
+    }
+    await expect(saveHands('partita-1', [])).rejects.toThrow(/Solo chi ha avviato la partita/)
+  })
+
+  it('riconosce l assenza di rete', async () => {
+    backend.state.error = { message: 'Failed to fetch' }
+    await expect(listLeagueMatches('lega-1')).rejects.toThrow(/connessione/i)
+  })
+})
+
+describe('saveHands', () => {
+  it('sostituisce l intero elenco delle mani', async () => {
+    backend.state.row = row()
+    const hands = [makeHand(), makeHand({ scope: { A: 2, B: 0 } })]
+
+    await saveHands('partita-1', hands)
+
+    expect(backend.state.updated).toEqual([{ hands }])
+  })
+})
+
+describe('summarise', () => {
+  it('riassume il punteggio usando il dominio, non un conto a parte', () => {
+    const remote = {
+      id: 'partita-1',
+      leagueId: 'lega-1',
+      createdBy: 'io',
+      canEdit: true,
+      status: 'ongoing' as const,
+      updatedAt: '2026-08-18T20:00:00Z',
+      match: {
+        rules: RULES,
+        teamNames: { A: 'Allegri', B: 'Musoni' },
+        // Settebello ad A più due scope: quattro punti in tutto, tre ad A.
+        hands: [makeHand({ scope: { A: 2, B: 1 } })],
+      },
+    }
+
+    expect(summarise(remote)).toEqual({
+      score: 'Allegri 3 – Musoni 1',
+      finished: false,
+      winnerName: null,
+    })
+  })
+})

@@ -1,0 +1,242 @@
+import type { RealtimeChannel } from '@supabase/supabase-js'
+import type { HandInput } from '../domain/hand'
+import { type Match, scoreMatch } from '../domain/match'
+import type { RuleSet } from '../domain/rules'
+import type { ByTeam, TeamId } from '../domain/teams'
+import type { MatchRow, MatchStatus } from './database.types'
+import { getSupabase } from './supabase'
+
+/** Una partita sul server, con l'indicazione di cosa può farci chi guarda. */
+export type RemoteMatch = {
+  id: string
+  leagueId: string | null
+  createdBy: string
+  /** Chi non l'ha avviata la vede aggiornarsi ma non può toccarla. */
+  canEdit: boolean
+  status: MatchStatus
+  updatedAt: string
+  /** La partita nel formato del dominio: il punteggio lo calcola l'app. */
+  match: Match
+}
+
+export type MatchLineup = { profileId: string; team: TeamId }
+
+const MESSAGES = {
+  network: 'Nessuna connessione. Controlla la rete e riprova.',
+  notAllowed: 'Solo chi ha avviato la partita può modificarla.',
+  notFound: 'Partita non trovata, o non fai parte della lega.',
+  createFailed: 'Non è stato possibile creare la partita. Riprova.',
+  saveFailed: 'Non è stato possibile salvare la mano. Riprova.',
+  loadFailed: 'Non è stato possibile caricare le partite. Riprova.',
+} as const
+
+const COLUMNS =
+  'id, league_id, created_by, rules, team_names, hands, status, created_at, updated_at'
+
+/**
+ * Il rifiuto di una policy arriva come 42501 o come zero righe aggiornate.
+ * Sono la stessa cosa vista da due angoli: chi non può scrivere non vede
+ * nemmeno la riga.
+ */
+function translate(error: { code?: string; message?: string } | null, fallback: string): Error {
+  if (!error) return new Error(fallback)
+  if (error.code === '42501') return new Error(MESSAGES.notAllowed)
+  if (error.code === 'PGRST116') return new Error(MESSAGES.notFound)
+  if (/fetch|network|Failed to fetch/i.test(error.message ?? ''))
+    return new Error(MESSAGES.network)
+  return new Error(fallback)
+}
+
+function toRemoteMatch(row: MatchRow, viewerId: string | null): RemoteMatch {
+  return {
+    id: row.id,
+    leagueId: row.league_id,
+    createdBy: row.created_by,
+    canEdit: viewerId !== null && row.created_by === viewerId,
+    status: row.status,
+    updatedAt: row.updated_at,
+    match: { rules: row.rules, teamNames: row.team_names, hands: row.hands },
+  }
+}
+
+async function viewerId(): Promise<string | null> {
+  const { data } = await getSupabase().auth.getSession()
+  return data.session?.user.id ?? null
+}
+
+export async function createRemoteMatch(input: {
+  leagueId: string | null
+  rules: RuleSet
+  teamNames: ByTeam<string>
+  lineup?: MatchLineup[]
+}): Promise<RemoteMatch> {
+  const supabase = getSupabase()
+  const me = await viewerId()
+  if (!me) throw new Error('Serve accedere per giocare in lega.')
+
+  const { data, error } = await supabase
+    .from('matches')
+    .insert({
+      league_id: input.leagueId,
+      created_by: me,
+      rules: input.rules,
+      team_names: input.teamNames,
+      hands: [],
+    })
+    .select(COLUMNS)
+    .single()
+
+  if (error || !data) throw translate(error, MESSAGES.createFailed)
+  const created = toRemoteMatch(data as MatchRow, me)
+
+  // La formazione è ciò che rende possibili le classifiche per giocatore:
+  // senza, sappiamo chi ha vinto ma non chi stava in quale squadra.
+  if (input.lineup && input.lineup.length > 0) {
+    const { error: lineupError } = await supabase.from('match_players').insert(
+      input.lineup.map((player) => ({
+        match_id: created.id,
+        profile_id: player.profileId,
+        team: player.team,
+      })),
+    )
+    if (lineupError) throw translate(lineupError, MESSAGES.createFailed)
+  }
+
+  return created
+}
+
+/**
+ * Sostituisce l'intero elenco delle mani. Non è un'ottimizzazione mancata:
+ * a modificare è sempre e solo chi ha avviato la partita, quindi non esiste
+ * scrittura concorrente da fondere, e una sostituzione secca non lascia mai
+ * lo stato a metà.
+ */
+export async function saveHands(matchId: string, hands: HandInput[]): Promise<RemoteMatch> {
+  const supabase = getSupabase()
+  const me = await viewerId()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .update({ hands })
+    .eq('id', matchId)
+    .select(COLUMNS)
+    .single()
+
+  if (error || !data) throw translate(error, MESSAGES.saveFailed)
+  return toRemoteMatch(data as MatchRow, me)
+}
+
+export async function setMatchStatus(
+  matchId: string,
+  status: MatchStatus,
+): Promise<RemoteMatch> {
+  const supabase = getSupabase()
+  const me = await viewerId()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .update({ status })
+    .eq('id', matchId)
+    .select(COLUMNS)
+    .single()
+
+  if (error || !data) throw translate(error, MESSAGES.saveFailed)
+  return toRemoteMatch(data as MatchRow, me)
+}
+
+export async function getRemoteMatch(matchId: string): Promise<RemoteMatch> {
+  const supabase = getSupabase()
+  const me = await viewerId()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select(COLUMNS)
+    .eq('id', matchId)
+    .single()
+  if (error || !data) throw translate(error, MESSAGES.notFound)
+  return toRemoteMatch(data as MatchRow, me)
+}
+
+/** Partite di una lega, dalla più recente. */
+export async function listLeagueMatches(leagueId: string, limit = 20): Promise<RemoteMatch[]> {
+  const supabase = getSupabase()
+  const me = await viewerId()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select(COLUMNS)
+    .eq('league_id', leagueId)
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw translate(error, MESSAGES.loadFailed)
+  return (data as MatchRow[]).map((row) => toRemoteMatch(row, me))
+}
+
+/**
+ * Partite che riguardano chi guarda: quelle avviate da lui e quelle delle
+ * sue leghe. Le policy fanno già il filtro, qui si ordina e si tronca.
+ */
+export async function listMyMatches(limit = 20): Promise<RemoteMatch[]> {
+  const supabase = getSupabase()
+  const me = await viewerId()
+
+  const { data, error } = await supabase
+    .from('matches')
+    .select(COLUMNS)
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw translate(error, MESSAGES.loadFailed)
+  return (data as MatchRow[]).map((row) => toRemoteMatch(row, me))
+}
+
+/**
+ * Segue una partita mentre viene giocata. Chi guarda riceve il tabellone
+ * aggiornato senza interrogare il server a intervalli, e senza poter
+ * modificare nulla: le policy valgono anche qui.
+ *
+ * Restituisce la funzione per smettere di ascoltare, da chiamare quando la
+ * schermata sparisce.
+ */
+export function watchRemoteMatch(
+  matchId: string,
+  onChange: (match: RemoteMatch) => void,
+): () => void {
+  const supabase = getSupabase()
+  let channel: RealtimeChannel | null = null
+  let stopped = false
+
+  void viewerId().then((me) => {
+    if (stopped) return
+
+    channel = supabase
+      .channel(`match:${matchId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        (payload) => onChange(toRemoteMatch(payload.new as MatchRow, me)),
+      )
+      .subscribe()
+  })
+
+  return () => {
+    stopped = true
+    if (channel) void supabase.removeChannel(channel)
+  }
+}
+
+/** Riepilogo per gli elenchi, senza far ricalcolare il punteggio alla UI. */
+export function summarise(remote: RemoteMatch): {
+  score: string
+  finished: boolean
+  winnerName: string | null
+} {
+  const state = scoreMatch(remote.match)
+  const { A, B } = remote.match.teamNames
+  return {
+    score: `${A} ${state.totals.A} – ${B} ${state.totals.B}`,
+    finished: state.status === 'finished',
+    winnerName: state.winner ? remote.match.teamNames[state.winner] : null,
+  }
+}
