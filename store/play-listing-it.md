@@ -27,7 +27,7 @@ toglie subito i tre dubbi che fanno scartare un'app sconosciuta.
 ```
 Il conto dei punti a fine mano è la parte noiosa della partita, e la primiera la sbagliano quasi tutti. Questa app la fa al posto tuo.
 
-Gratis, senza pubblicità, senza account, completamente offline.
+Gratis e senza pubblicità. Per contare al tavolo non serve nessun account e funziona senza rete.
 
 I PUNTI DI OGNI MANO
 
@@ -60,9 +60,13 @@ FATTA PER IL TAVOLO
 • La partita resta salvata: chiudi l'app e la ritrovi dov'era
 • Tema chiaro e scuro
 
+LEGHE, SE TI SERVONO
+
+Crea una lega, invita chi vuoi con un codice e giocate insieme: chi avvia la partita è l'unico che la conduce, gli altri la seguono aggiornarsi dal vivo. Serve un account, e si accede con un codice via email senza impostare password.
+
 PRIVACY
 
-Nessun dato raccolto, nessun server, nessun tracciamento, nessuna pubblicità. Non c'è niente da accettare e niente da configurare. La partita resta sul tuo telefono e sparisce se disinstalli l'app.
+Senza account non esce niente dal telefono. Con un account trattiamo solo quello che serve alle leghe: indirizzo email, nome mostrato e partite, su server nell'Unione Europea. Nessuna pubblicità, nessun tracciamento, nessuna profilazione, nessuna cessione di dati a terzi.
 
 CODICE APERTO
 

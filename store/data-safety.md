@@ -2,61 +2,76 @@
 
 Sezione **Norme sulle app → Contenuti dell'app → Sicurezza dei dati**.
 
-Nel nostro caso è la parte facile: l'app non ha backend, non fa chiamate di rete
-e non integra SDK che raccolgono dati. Quasi tutte le domande si chiudono al
-primo passaggio.
+> ⚠️ Queste risposte sono cambiate radicalmente con l'introduzione di account e
+> leghe. La versione precedente dichiarava "nessun dato raccolto": era vera
+> quando l'app non aveva un server, non lo è più. Una data safety non veritiera
+> è tra i motivi più rapidi di rimozione dallo store.
+
+## Il punto di partenza
+
+L'app ha due modi d'uso e la dichiarazione deve coprire il più invasivo:
+
+- **senza account** non esce nulla dal telefono
+- **con account** trattiamo email, nome mostrato, leghe e partite
+
+Google chiede cosa l'app *può* raccogliere, non cosa raccoglie sempre. Quindi
+la risposta alla domanda d'ingresso è **Sì**.
 
 ## Raccolta e condivisione
 
 | Domanda | Risposta |
 | --- | --- |
-| La tua app raccoglie o condivide uno dei tipi di dati utente richiesti? | **No** |
+| La tua app raccoglie o condivide dati utente? | **Sì** |
+| I dati sono criptati in transito? | **Sì** — il collegamento è HTTPS |
+| Gli utenti possono richiedere la cancellazione dei dati? | **Sì** |
 
-Rispondendo No, il questionario salta tutte le sezioni sui tipi di dati
-(posizione, informazioni personali, foto, file, attività dell'app…). Non c'è
-altro da compilare in questa parte.
+## Tipi di dati da dichiarare
 
-### Perché "No" è la risposta corretta e non una scorciatoia
+| Tipo | Raccolto | Condiviso | Obbligatorio | Finalità |
+| --- | --- | --- | --- | --- |
+| Informazioni personali → **Indirizzo email** | Sì | No | Facoltativo | Gestione dell'account |
+| Informazioni personali → **Nome** | Sì | No | Facoltativo | Gestione dell'account, funzionalità dell'app |
+| Contenuti dell'app → **Altri contenuti generati dagli utenti** | Sì | No | Facoltativo | Funzionalità dell'app |
 
-Google definisce "raccolta" la trasmissione di dati **fuori dal dispositivo**.
-I nomi delle squadre e i punti delle mani vengono salvati in locale con
-AsyncStorage e non lasciano mai il telefono: non sono quindi dati raccolti ai
-fini del questionario.
+"Facoltativo" è la risposta corretta perché l'app resta pienamente utilizzabile
+senza account: chi conta i punti al tavolo non fornisce nulla.
 
-Attenzione a non cambiare questa risposta senza cambiare l'app: se un domani
-aggiungi crash reporting, analytics o un backup in cloud, la dichiarazione va
-aggiornata **prima** della pubblicazione di quella versione. Una data safety
-falsa è uno dei motivi più rapidi di rimozione dallo store.
+Il **nome mostrato** va dichiarato anche se di partenza lo deriviamo dall'email:
+è comunque un dato personale, ed è visibile agli altri membri della lega.
 
-## Sicurezza
+I **contenuti generati dagli utenti** sono le partite: regole, nomi delle
+squadre, punti di ogni mano e giocatori che vi hanno partecipato.
 
-| Domanda | Risposta |
+### Perché "Condiviso: No"
+
+Google definisce condivisione il trasferimento a una *terza parte distinta*.
+Supabase è nostro responsabile del trattamento, non un destinatario autonomo:
+ospita i dati per conto nostro. La visibilità fra membri della stessa lega è
+funzionamento dell'app, non condivisione con terzi.
+
+## Cancellazione dell'account
+
+Google richiede che un'app con registrazione offra **due strade**: una dentro
+l'app e una da un URL pubblico raggiungibile senza installarla.
+
+| Cosa | Stato |
 | --- | --- |
-| I dati sono criptati in transito? | Non applicabile — nessun dato trasmesso |
-| Fornisci un modo per richiedere la cancellazione dei dati? | Non applicabile — nessun dato raccolto |
+| Percorso dentro l'app | **DA IMPLEMENTARE** |
+| URL pubblico di richiesta | https://alessiobertollo.github.io/scopone/privacy.html (sezione "Cancellare l'account") |
 
-Se il questionario obbliga a rispondere, la formula corretta è: i dati restano
-sul dispositivo e vengono eliminati disinstallando l'app o avviando una nuova
-partita.
+> ⚠️ **Bloccante.** Senza il percorso dentro l'app la scheda viene rifiutata.
+> Al momento la privacy policy indica la richiesta via email, che copre l'URL
+> pubblico ma non il requisito in-app.
 
 ## Pubblico di destinazione ed età
 
-Sezione **Contenuti dell'app → Pubblico di destinazione**.
-
-| Campo | Valore consigliato |
+| Campo | Valore |
 | --- | --- |
 | Fasce d'età | **13+** |
 | L'app è rivolta ai bambini? | No |
 
-### Perché 13+ e non "tutte le età"
-
-Lo scopone lo giocano anche i bambini, quindi la tentazione è includere le fasce
-sotto i 13 anni. Non farlo: includerle attiva la **Families Policy** di Google,
-che porta requisiti aggiuntivi su contenuti, pubblicità, un questionario
-dedicato e una revisione più severa. Per un contapunti senza pubblicità e senza
-dati sarebbero adempimenti a costo zero di beneficio.
-
-Dichiarare 13+ non impedisce a nessuno di scaricare o usare l'app.
+Resta 13+ come prima, e ora c'è una ragione in più: con la registrazione
+entrano in gioco gli obblighi sul consenso dei minori.
 
 ## Altre dichiarazioni
 
@@ -64,21 +79,17 @@ Dichiarare 13+ non impedisce a nessuno di scaricare o usare l'app.
 | --- | --- |
 | Contiene annunci | No |
 | Acquisti in-app | No |
-| App finanziaria | No |
-| App per la salute | No |
-| Contenuti generati dagli utenti | No |
-| Accesso ai dati tramite API o SDK di terze parti | No |
+| Contenuti generati dagli utenti | **Sì** — nomi squadra e nomi delle leghe |
 
-## Status di trader (DSA, obbligatorio per l'UE)
+### Conseguenza dei contenuti generati dagli utenti
 
-Vive in **Play Console → Impostazioni → Profilo sviluppatore**, non nella data
-safety, ma va compilato prima della distribuzione in Europa.
+Dichiarando **Sì**, Google si aspetta un modo per segnalare contenuti
+inappropriati e per bloccare un utente. Nel nostro caso la superficie è
+minima — nomi di squadre e di leghe visibili solo dentro leghe private a cui
+si entra su invito — ma è bene saperlo prima che lo chieda la revisione.
 
-Come persona fisica che pubblica un'app gratuita senza monetizzazione, in linea
-di principio non sei un "trader". Attenzione però: la dichiarazione comporta
-comunque la pubblicazione di nome e recapiti sulla scheda dell'app.
+## Status di trader (DSA)
 
-Questa è una qualificazione giuridica, non tecnica: se hai dubbi sulla tua
-posizione, la risposta corretta non te la può dare né questo documento né io.
-Nel dubbio, verifica direttamente le linee guida del Play Console al momento
-della compilazione.
+Invariato rispetto a prima, in **Impostazioni → Profilo sviluppatore**. La
+qualificazione giuridica non cambia per il fatto che l'app ora abbia un
+account: verifica le linee guida al momento della compilazione.

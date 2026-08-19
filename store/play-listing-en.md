@@ -24,7 +24,7 @@ Score keeper for Scopone and Scopa. Free, offline, no ads, no tracking.
 ```
 Counting points at the end of a hand is the boring part of the game, and almost everyone gets the primiera wrong. This app does it for you.
 
-Free, no ads, no account, fully offline.
+Free and ad-free. Counting at the table needs no account and works offline.
 
 POINTS IN EVERY HAND
 
@@ -57,9 +57,13 @@ BUILT FOR THE TABLE
 • The match is stored: close the app and find it where you left it
 • Light and dark themes
 
+LEAGUES, IF YOU WANT THEM
+
+Create a league, invite people with a code and play together: whoever starts a match is the only one who runs it, everyone else watches it update live. That needs an account, and you sign in with a code sent by email — no passwords.
+
 PRIVACY
 
-No data collected, no server, no tracking, no advertising. Nothing to accept, nothing to configure. The match stays on your phone and disappears when you uninstall the app.
+Without an account nothing leaves your phone. With one we process only what leagues need: email address, display name and matches, on servers in the European Union. No advertising, no tracking, no profiling, no sharing with third parties.
 
 OPEN SOURCE
 

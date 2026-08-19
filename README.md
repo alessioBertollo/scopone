@@ -1,9 +1,13 @@
 # Scopone
 
-Contapunti per scopone e scopa. Gratuito, senza pubblicità, senza account,
-completamente offline.
+Contapunti per scopone e scopa. Gratuito e senza pubblicità.
 
-L'app non raccoglie nessun dato: non c'è un backend da cui potrebbe raccoglierli.
+Per contare i punti al tavolo non serve nessun account e non serve rete: la
+partita resta sul telefono e non esce nulla. Chi vuole giocare in lega con
+altre persone può creare un account, e allora l'app tratta il minimo
+indispensabile — email, nome mostrato e partite — su server nell'Unione
+Europea. Mai per pubblicità o profilazione: vedi la
+[privacy policy](https://alessiobertollo.github.io/scopone/privacy.html).
 
 ## Perché
 
