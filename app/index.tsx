@@ -108,19 +108,19 @@ export default function HomeScreen() {
             Il conto dei punti, primiera compresa.
           </Text>
         </View>
-        {isBackendConfigured ? (
+        {
           <Pressable
-            testID="vai-account"
+            testID="vai-impostazioni"
             accessibilityRole="button"
-            accessibilityLabel="Account"
-            onPress={() => router.push(signedIn ? '/account' : '/sign-in')}
+            accessibilityLabel="Impostazioni"
+            onPress={() => router.push('/settings')}
             className="mt-2 rounded-full border border-line bg-surface px-3 py-2 active:opacity-70"
           >
             <Text className="text-ink text-sm" numberOfLines={1}>
-              {signedIn && user ? user.displayName : 'Accedi'}
+              {signedIn && user ? user.displayName : 'Impostazioni'}
             </Text>
           </Pressable>
-        ) : null}
+        }
       </View>
 
       {inCorso ? (

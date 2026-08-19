@@ -2,30 +2,9 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { RANKS, type Rank, SUITS, type Suit } from '../domain/cards'
 import { type BestBySuit, primieraTotal } from '../domain/primiera'
 import { type ByTeam, otherTeam, TEAMS, type TeamId } from '../domain/teams'
+import { shortRankFor, suitLabel } from '../lib/deck'
+import { useSettingsStore } from '../store/settings-store'
 import { cn } from '../ui/cn'
-
-const SUIT_LABEL: Record<Suit, string> = {
-  denari: 'Denari',
-  coppe: 'Coppe',
-  spade: 'Spade',
-  bastoni: 'Bastoni',
-}
-
-/** Etichette corte, per far stare tutte e dieci le carte su una riga. */
-function shortRank(rank: Rank): string {
-  switch (rank) {
-    case 1:
-      return 'A'
-    case 8:
-      return 'F'
-    case 9:
-      return 'D'
-    case 10:
-      return 'R'
-    default:
-      return String(rank)
-  }
-}
 
 type Props = {
   best: ByTeam<BestBySuit>
@@ -69,6 +48,8 @@ function RankChip({
 }
 
 export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
+  const deck = useSettingsStore((state) => state.deck)
+
   const setRank = (team: TeamId, suit: Suit, rank: Rank | undefined) => {
     onChange({ ...best, [team]: { ...best[team], [suit]: rank } })
   }
@@ -77,7 +58,7 @@ export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
     <View className="gap-4">
       {SUITS.map((suit) => (
         <View key={suit}>
-          <Text className="mb-1.5 font-medium text-ink text-sm">{SUIT_LABEL[suit]}</Text>
+          <Text className="mb-1.5 font-medium text-ink text-sm">{suitLabel(suit, deck)}</Text>
 
           {TEAMS.map((team) => {
             const current = best[team][suit]
@@ -105,7 +86,7 @@ export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
                     {RANKS.map((rank) => (
                       <RankChip
                         key={rank}
-                        label={shortRank(rank)}
+                        label={shortRankFor(rank, deck)}
                         testID={`primiera-${team}-${suit}-${rank}`}
                         team={team}
                         selected={current === rank}

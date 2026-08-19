@@ -34,7 +34,8 @@
             "enableShrinkResourcesInReleaseBuilds": true
           }
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true

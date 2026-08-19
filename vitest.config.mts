@@ -9,6 +9,14 @@ export default defineConfig({
       '@react-native-async-storage/async-storage': fileURLToPath(
         new URL('./src/test/async-storage-mock.ts', import.meta.url),
       ),
+      // react-native è scritto in Flow e il parser non lo digerisce, ma
+      // moduli non di interfaccia lo importano comunque.
+      'react-native': fileURLToPath(
+        new URL('./src/test/react-native-mock.ts', import.meta.url),
+      ),
+      'expo-localization': fileURLToPath(
+        new URL('./src/test/expo-localization-mock.ts', import.meta.url),
+      ),
     },
   },
   test: {
