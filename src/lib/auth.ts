@@ -36,6 +36,7 @@ const MESSAGES = {
   verifyFailed: 'Accesso non riuscito. Riprova.',
   signOutFailed: 'Uscita non riuscita. Riprova.',
   saveNameFailed: 'Non è stato possibile salvare il nome. Riprova.',
+  deleteFailed: "Non è stato possibile cancellare l'account. Riprova.",
 } as const
 
 /** Nome di ripiego quando il profilo non è leggibile: lo stesso che sceglie il trigger. */
@@ -266,4 +267,24 @@ function translate(error: unknown, fallback: string): Error {
   if (status === 429) return fail(MESSAGES.tooManyRequests, error)
 
   return fail(fallback, error)
+}
+
+/**
+ * Cancella account, profilo, leghe possedute e partite create. Irreversibile.
+ *
+ * Il lavoro lo fa una funzione del database, non una sequenza di chiamate
+ * dall'app: i vincoli sulle tabelle impongono un ordine preciso, e una
+ * cancellazione interrotta a metà lascerebbe un account inutilizzabile invece
+ * di uno intatto.
+ */
+export async function deleteAccount(): Promise<void> {
+  const supabase = getSupabase()
+  await requireUser(supabase)
+
+  const { error } = await supabase.rpc('delete_my_account')
+  if (error) throw translate(error, MESSAGES.deleteFailed)
+
+  // Il token è già firmato e resta valido finché non lo si butta: nessuno
+  // lo revoca al posto nostro solo perché l'utente non esiste più.
+  await supabase.auth.signOut()
 }

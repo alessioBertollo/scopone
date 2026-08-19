@@ -28,6 +28,7 @@ export default function RootLayout() {
           <Stack.Screen name="match" />
           <Stack.Screen name="hand" options={{ presentation: 'modal' }} />
           <Stack.Screen name="sign-in" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="account" options={{ presentation: 'modal' }} />
           <Stack.Screen name="league/new" options={{ presentation: 'modal' }} />
           <Stack.Screen name="league/[id]" />
         </Stack>

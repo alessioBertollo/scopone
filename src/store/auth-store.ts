@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   type AuthUser,
+  deleteAccount as deleteAccountOnBackend,
   getCurrentUser,
   sendLoginCode,
   signOut as signOutFromBackend,
@@ -25,6 +26,8 @@ export type AuthStore = {
   verifyCode: (email: string, code: string) => Promise<void>
   signOut: () => Promise<void>
   setDisplayName: (name: string) => Promise<void>
+  /** Cancella account e dati collegati. Irreversibile. */
+  deleteAccount: () => Promise<void>
 }
 
 /**
@@ -85,5 +88,12 @@ export const useAuthStore = create<AuthStore>()((set) => ({
   setDisplayName: async (name) => {
     const user = await updateDisplayName(name)
     set({ user })
+  },
+
+  deleteAccount: async () => {
+    if (!isBackendConfigured) throw new Error('Nessun account da cancellare.')
+
+    await deleteAccountOnBackend()
+    set({ user: null, status: 'signedOut' })
   },
 }))
