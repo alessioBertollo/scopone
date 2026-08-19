@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { tr } from '../i18n/tr'
 import type { LeagueMemberRow, LeagueRole, LeagueRow, ProfileRow } from './database.types'
 import { getSupabase } from './supabase'
 
@@ -37,30 +38,38 @@ const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 const CODE_LENGTH = 6
 const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`)
 
-/** Nome di ripiego quando il profilo non è leggibile: lo stesso del trigger. */
-const FALLBACK_NAME = 'Giocatore'
+/**
+ * Nome di ripiego quando il profilo di un membro non è leggibile: è solo
+ * ciò che si legge a schermo, quindi segue la lingua scelta.
+ */
+function fallbackName(): string {
+  return tr('common.player')
+}
 
 /**
- * Un messaggio per ogni cosa che può andare storta, in italiano e con dentro
- * la mossa successiva. Postgres parla di SQLSTATE e di policy: a chi sta
- * cercando di entrare in una lega non dicono niente di utile.
+ * Un messaggio per ogni cosa che può andare storta, con dentro la mossa
+ * successiva. Postgres parla di SQLSTATE e di policy: a chi sta cercando di
+ * entrare in una lega non dicono niente di utile.
+ *
+ * Sono funzioni e non stringhe perché l'oggetto viene valutato all'import:
+ * tradurre qui congelerebbe la lingua a quella del primo caricamento.
  */
 const MESSAGES = {
-  network: 'Nessuna connessione. Controlla la rete e riprova.',
-  noSession: 'Sessione scaduta. Accedi di nuovo.',
-  nameLength: `Il nome della lega deve avere da ${NAME_MIN} a ${NAME_MAX} caratteri.`,
-  malformedCode: `Il codice di invito è di ${CODE_LENGTH} caratteri fra lettere e cifre.`,
-  invalidCode: 'Codice di invito non valido.',
-  notFound: 'Lega non trovata, o non ne fai più parte.',
-  notMember: 'Non fai parte di questa lega.',
-  ownerCannotLeave: 'Hai creato tu questa lega: non puoi uscirne, puoi solo eliminarla.',
-  deleteFailed: 'Non è stato possibile eliminare la lega. Riprova.',
-  forbidden: 'Non hai i permessi per farlo.',
-  createFailed: 'Non è stato possibile creare la lega. Riprova.',
-  joinFailed: 'Non è stato possibile entrare nella lega. Riprova.',
-  listFailed: 'Non è stato possibile caricare le leghe. Riprova.',
-  loadFailed: 'Non è stato possibile caricare la lega. Riprova.',
-  leaveFailed: 'Non è stato possibile uscire dalla lega. Riprova.',
+  network: () => tr('leagues.network'),
+  noSession: () => tr('leagues.noSession'),
+  nameLength: () => tr('leagues.nameLength', { minimo: NAME_MIN, massimo: NAME_MAX }),
+  malformedCode: () => tr('leagues.malformedCode', { caratteri: CODE_LENGTH }),
+  invalidCode: () => tr('leagues.invalidCode'),
+  notFound: () => tr('leagues.notFound'),
+  notMember: () => tr('leagues.notMember'),
+  ownerCannotLeave: () => tr('leagues.ownerCannotLeave'),
+  deleteFailed: () => tr('leagues.deleteFailed'),
+  forbidden: () => tr('leagues.forbidden'),
+  createFailed: () => tr('leagues.createFailed'),
+  joinFailed: () => tr('leagues.joinFailed'),
+  listFailed: () => tr('leagues.listFailed'),
+  loadFailed: () => tr('leagues.loadFailed'),
+  leaveFailed: () => tr('leagues.leaveFailed'),
 } as const
 
 const LEAGUE_COLUMNS = 'id, name, created_by, invite_code, created_at'
@@ -71,7 +80,7 @@ const PROFILE_COLUMNS = 'id, display_name, created_at'
 export async function createLeague(name: string): Promise<League> {
   const leagueName = name.trim()
   if (leagueName.length < NAME_MIN || leagueName.length > NAME_MAX) {
-    throw new Error(MESSAGES.nameLength)
+    throw new Error(MESSAGES.nameLength())
   }
 
   const supabase = getSupabase()
@@ -81,10 +90,10 @@ export async function createLeague(name: string): Promise<League> {
   // univoco e iscrizione del proprietario devono nascere insieme o non
   // nascere affatto, e solo la funzione sa rigenerare il codice se collide.
   const { data, error } = await supabase.rpc('create_league', { league_name: leagueName })
-  if (error) throw translate(error, MESSAGES.createFailed)
+  if (error) throw translate(error, MESSAGES.createFailed())
 
   const row = firstRow<LeagueRow>(data)
-  if (!row) throw new Error(MESSAGES.createFailed)
+  if (!row) throw new Error(MESSAGES.createFailed())
 
   // Appena creata la lega ha un solo iscritto, chi l'ha creata: chiederlo al
   // server sarebbe un giro di rete per sapere una cosa che già sappiamo.
@@ -101,15 +110,15 @@ export async function joinLeagueByCode(code: string): Promise<League> {
   // Con RLS attivo la lega non è leggibile finché non se ne fa parte, quindi
   // il codice non si può nemmeno cercare: l'ingresso passa per forza di qui.
   const { data, error } = await supabase.rpc('join_league_by_code', { code: inviteCode })
-  if (error) throw translate(error, MESSAGES.joinFailed)
+  if (error) throw translate(error, MESSAGES.joinFailed())
 
   const id = readUuid(data)
-  if (!id) throw new Error(MESSAGES.invalidCode)
+  if (!id) throw new Error(MESSAGES.invalidCode())
 
   // La funzione non fa nulla se l'iscrizione c'era già, ma restituisce
   // comunque la lega: rileggerla è anche il modo di gestire il caso «ero già
   // dentro» senza distinguerlo.
-  return readLeague(supabase, id, profileId, MESSAGES.joinFailed)
+  return readLeague(supabase, id, profileId, MESSAGES.joinFailed())
 }
 
 export async function listMyLeagues(): Promise<League[]> {
@@ -121,8 +130,8 @@ export async function listMyLeagues(): Promise<League[]> {
   // darebbe l'illusione che sia l'app a decidere chi vede cosa, e ci
   // metterebbe una seconda regola da tenere allineata alla prima.
   const [rows, members] = await Promise.all([
-    fetchLeagueRows(supabase, MESSAGES.listFailed),
-    fetchMemberRows(supabase, MESSAGES.listFailed),
+    fetchLeagueRows(supabase, MESSAGES.listFailed()),
+    fetchMemberRows(supabase, MESSAGES.listFailed()),
   ])
 
   const counts = new Map<string, number>()
@@ -140,8 +149,8 @@ export async function getLeague(
   const profileId = await requireProfileId(supabase)
 
   const [row, memberRows] = await Promise.all([
-    fetchLeagueRow(supabase, id, MESSAGES.loadFailed),
-    fetchMemberRows(supabase, MESSAGES.loadFailed, id),
+    fetchLeagueRow(supabase, id, MESSAGES.loadFailed()),
+    fetchMemberRows(supabase, MESSAGES.loadFailed(), id),
   ])
 
   const names = await fetchDisplayNames(
@@ -152,7 +161,7 @@ export async function getLeague(
   const members = memberRows
     .map((member) => ({
       profileId: member.profile_id,
-      displayName: names.get(member.profile_id) ?? FALLBACK_NAME,
+      displayName: names.get(member.profile_id) ?? fallbackName(),
       role: member.role,
       joinedAt: member.joined_at,
     }))
@@ -172,23 +181,23 @@ export async function leaveLeague(id: string): Promise<void> {
     .eq('league_id', id)
     .eq('profile_id', profileId)
     .maybeSingle()
-  if (error) throw translate(error, MESSAGES.leaveFailed)
+  if (error) throw translate(error, MESSAGES.leaveFailed())
 
   const membership = (data ?? null) as LeagueMemberRow | null
-  if (!membership) throw new Error(MESSAGES.notMember)
+  if (!membership) throw new Error(MESSAGES.notMember())
 
   // Il database lascerebbe uscire anche il proprietario, perché la policy
   // guarda solo `profile_id = auth.uid()`. Ne resterebbe una lega che nessuno
   // può più eliminare: `leagues.created_by` ha un `on delete restrict`, e
   // rinominare o cancellare è riservato a chi l'ha creata.
-  if (membership.role === 'owner') throw new Error(MESSAGES.ownerCannotLeave)
+  if (membership.role === 'owner') throw new Error(MESSAGES.ownerCannotLeave())
 
   const { error: deleteError } = await supabase
     .from('league_members')
     .delete()
     .eq('league_id', id)
     .eq('profile_id', profileId)
-  if (deleteError) throw translate(deleteError, MESSAGES.leaveFailed)
+  if (deleteError) throw translate(deleteError, MESSAGES.leaveFailed())
 }
 
 // ------------------------------------------------------------ utilità interne
@@ -235,7 +244,7 @@ async function fetchLeagueRow(
   const row = (data ?? null) as LeagueRow | null
   // Una lega inesistente e una di cui non si fa parte sono la stessa cosa
   // vista da fuori, ed è voluto: altrimenti si potrebbero sondare gli id.
-  if (!row) throw new Error(MESSAGES.notFound)
+  if (!row) throw new Error(MESSAGES.notFound())
 
   return row
 }
@@ -312,7 +321,7 @@ function byRoleThenJoined(a: LeagueMember, b: LeagueMember): number {
  */
 function requireInviteCode(code: string): string {
   const normalized = code.replace(/[\s-]+/g, '').toUpperCase()
-  if (!CODE_PATTERN.test(normalized)) throw new Error(MESSAGES.malformedCode)
+  if (!CODE_PATTERN.test(normalized)) throw new Error(MESSAGES.malformedCode())
   return normalized
 }
 
@@ -320,10 +329,10 @@ async function requireProfileId(supabase: SupabaseClient): Promise<string> {
   // `getSession` legge la sessione già salvata e non chiama il server: le
   // leghe si guardano spesso, e un giro di rete in più a ogni lettura si sente.
   const { data, error } = await supabase.auth.getSession()
-  if (error) throw translate(error, MESSAGES.noSession)
+  if (error) throw translate(error, MESSAGES.noSession())
 
   const id = data.session?.user.id
-  if (!id) throw new Error(MESSAGES.noSession)
+  if (!id) throw new Error(MESSAGES.noSession())
 
   return id
 }
@@ -393,11 +402,12 @@ function translate(error: unknown, fallback: string): Error {
     status === 0 ||
     (message !== undefined &&
       /failed to fetch|network request failed|networkerror/i.test(message))
-  if (offline) return fail(MESSAGES.network, error)
+  if (offline) return fail(MESSAGES.network(), error)
 
   // P0001 è il codice del `raise exception` di plpgsql: i messaggi di
-  // `create_league` e `join_league_by_code` sono già scritti in italiano e
-  // per l'utente, quindi sostituirli con un generico sarebbe una perdita.
+  // `create_league` e `join_league_by_code` sono già scritti per l'utente,
+  // quindi sostituirli con un generico sarebbe una perdita. Restano in
+  // italiano anche in inglese: li scrive il database, non l'app.
   if (code === 'P0001' && message !== undefined && message.trim().length > 0) {
     return fail(ensureStop(message.trim()), error)
   }
@@ -406,24 +416,24 @@ function translate(error: unknown, fallback: string): Error {
     // Violazione di un check: sui dati che mandiamo può essere solo il nome,
     // perché il codice di invito lo genera il server.
     case '23514':
-      return fail(MESSAGES.nameLength, error)
+      return fail(MESSAGES.nameLength(), error)
     // Nessun profilo a cui agganciare l'iscrizione: la sessione c'è ma la
     // riga creata dal trigger non è ancora arrivata.
     case '23503':
-      return fail(MESSAGES.noSession, error)
+      return fail(MESSAGES.noSession(), error)
     case '42501':
-      return fail(MESSAGES.forbidden, error)
+      return fail(MESSAGES.forbidden(), error)
     case 'PGRST301':
     case 'session_expired':
     case 'session_not_found':
     case 'refresh_token_not_found':
     case 'bad_jwt':
-      return fail(MESSAGES.noSession, error)
+      return fail(MESSAGES.noSession(), error)
     default:
       break
   }
 
-  if (status === 401 || status === 403) return fail(MESSAGES.forbidden, error)
+  if (status === 401 || status === 403) return fail(MESSAGES.forbidden(), error)
 
   return fail(fallback, error)
 }
@@ -443,5 +453,5 @@ export async function deleteLeague(id: string): Promise<void> {
   await requireProfileId(supabase)
 
   const { error } = await supabase.from('leagues').delete().eq('id', id)
-  if (error) throw translate(error, MESSAGES.deleteFailed)
+  if (error) throw translate(error, MESSAGES.deleteFailed())
 }

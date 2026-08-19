@@ -2,6 +2,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { RANKS, type Rank, SUITS, type Suit } from '../domain/cards'
 import { type BestBySuit, primieraTotal } from '../domain/primiera'
 import { type ByTeam, otherTeam, TEAMS, type TeamId } from '../domain/teams'
+import { useTranslation } from '../i18n/useTranslation'
 import { shortRankFor, suitLabel } from '../lib/deck'
 import { useSettingsStore } from '../store/settings-store'
 import { cn } from '../ui/cn'
@@ -48,6 +49,7 @@ function RankChip({
 }
 
 export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
+  const { t } = useTranslation()
   const deck = useSettingsStore((state) => state.deck)
 
   const setRank = (team: TeamId, suit: Suit, rank: Rank | undefined) => {
@@ -103,7 +105,7 @@ export function PrimieraCardsInput({ best, teamNames, onChange }: Props) {
       ))}
 
       <View className="flex-row justify-between rounded-xl bg-sunken px-3 py-2">
-        <Text className="text-muted text-xs">Totale primiera</Text>
+        <Text className="text-muted text-xs">{t('primiera.total')}</Text>
         <Text className="text-xs">
           <Text testID="primiera-totale-A" className="font-semibold text-team-a">
             {primieraTotal(best.A)}

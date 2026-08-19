@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import { useTranslation } from '../src/i18n/useTranslation'
 import { listMyMatches, type RemoteMatch, summarise } from '../src/lib/matches'
 import { isBackendConfigured } from '../src/lib/supabase'
 import { useAuthStore } from '../src/store/auth-store'
@@ -47,6 +48,7 @@ function RowCard({
 
 export default function HomeScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
 
   const hasStarted = useMatchStore((state) => state.hasStarted)
   const teamNames = useMatchStore((state) => state.match.teamNames)
@@ -95,7 +97,7 @@ export default function HomeScreen() {
       scroll
       footer={
         <Button
-          label="Nuova partita"
+          label={t('home.newMatch')}
           testID="nuova-partita"
           onPress={() => router.push('/new-match')}
         />
@@ -104,20 +106,18 @@ export default function HomeScreen() {
       <View className="flex-row items-start justify-between pt-6 pb-1">
         <View className="flex-1">
           <Text className="font-bold text-4xl text-felt tracking-tight">Scopone</Text>
-          <Text className="mt-1 text-base text-muted">
-            Il conto dei punti, primiera compresa.
-          </Text>
+          <Text className="mt-1 text-base text-muted">{t('app.tagline')}</Text>
         </View>
         {
           <Pressable
             testID="vai-impostazioni"
             accessibilityRole="button"
-            accessibilityLabel="Impostazioni"
+            accessibilityLabel={t('home.settings')}
             onPress={() => router.push('/settings')}
             className="mt-2 rounded-full border border-line bg-surface px-3 py-2 active:opacity-70"
           >
             <Text className="text-ink text-sm" numberOfLines={1}>
-              {signedIn && user ? user.displayName : 'Impostazioni'}
+              {signedIn && user ? user.displayName : t('home.settings')}
             </Text>
           </Pressable>
         }
@@ -125,34 +125,30 @@ export default function HomeScreen() {
 
       {inCorso ? (
         <>
-          <SectionTitle>Partita in sospeso</SectionTitle>
+          <SectionTitle>{t('home.pending')}</SectionTitle>
           <RowCard
             accent
             testID="riprendi-partita"
             title={punteggioLocale}
-            detail={`Mancano ${Math.min(local.remaining.A, local.remaining.B)} punti · riprendi da dove eravate`}
+            detail={t('home.resume', {
+              punti: Math.min(local.remaining.A, local.remaining.B),
+            })}
             onPress={() => router.push('/match')}
           />
         </>
       ) : null}
 
-      <SectionTitle>Le tue leghe</SectionTitle>
+      <SectionTitle>{t('home.leagues')}</SectionTitle>
       {!isBackendConfigured ? (
         <Card>
-          <Text className="text-muted text-sm">
-            Questa copia dell'app non è collegata a nessun server: le leghe non sono
-            disponibili, ma le partite in solitaria funzionano.
-          </Text>
+          <Text className="text-muted text-sm">{t('home.noBackend')}</Text>
         </Card>
       ) : !signedIn ? (
         <Card>
-          <Text className="text-ink text-sm">
-            Una lega tiene insieme un gruppo di giocatori: le partite restano in comune e
-            chiunque può seguirle mentre si giocano.
-          </Text>
+          <Text className="text-ink text-sm">{t('home.leaguesPitch')}</Text>
           <View className="mt-4">
             <Button
-              label="Accedi per iniziare"
+              label={t('home.signInToStart')}
               variant="secondary"
               testID="vai-accesso"
               onPress={() => router.push('/sign-in')}
@@ -165,10 +161,10 @@ export default function HomeScreen() {
         </Card>
       ) : leagues.length === 0 ? (
         <Card>
-          <Text className="text-ink text-sm">Non fai ancora parte di nessuna lega.</Text>
+          <Text className="text-ink text-sm">{t('home.noLeagues')}</Text>
           <View className="mt-4">
             <Button
-              label="Crea una lega o entra con un codice"
+              label={t('home.createOrJoin')}
               variant="secondary"
               testID="crea-lega"
               onPress={() => router.push('/league/new')}
@@ -182,12 +178,15 @@ export default function HomeScreen() {
               key={league.id}
               testID={`lega-${league.id}`}
               title={league.name}
-              detail={`${league.memberCount} ${league.memberCount === 1 ? 'giocatore' : 'giocatori'} · codice ${league.inviteCode}`}
+              detail={t(
+                league.memberCount === 1 ? 'home.leagueOnePlayer' : 'home.leagueManyPlayers',
+                { numero: league.memberCount, codice: league.inviteCode },
+              )}
               onPress={() => router.push(`/league/${league.id}`)}
             />
           ))}
           <Button
-            label="Crea una lega o entra con un codice"
+            label={t('home.createOrJoin')}
             variant="ghost"
             testID="crea-lega"
             onPress={() => router.push('/league/new')}
@@ -195,7 +194,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <SectionTitle>Partite recenti</SectionTitle>
+      <SectionTitle>{t('home.recent')}</SectionTitle>
       {loadingRemote ? (
         <Card>
           <ActivityIndicator />
@@ -211,10 +210,12 @@ export default function HomeScreen() {
                 title={riepilogo.score}
                 detail={
                   riepilogo.finished
-                    ? `Ha vinto ${riepilogo.winnerName ?? 'nessuno'}`
+                    ? t('home.winner', {
+                        nome: riepilogo.winnerName ?? t('home.nobody'),
+                      })
                     : match.canEdit
-                      ? 'In corso · la stai conducendo tu'
-                      : 'In corso · la stai seguendo'
+                      ? t('home.ongoingYours')
+                      : t('home.ongoingWatching')
                 }
                 onPress={() => router.push(`/match?remote=${match.id}`)}
               />
@@ -224,9 +225,7 @@ export default function HomeScreen() {
       ) : (
         <Card>
           <Text className="text-muted text-sm">
-            {signedIn
-              ? 'Nessuna partita ancora. Quelle che giocherai in lega compariranno qui.'
-              : 'Le partite giocate in lega compariranno qui. Al momento l’app tiene solo quella in corso sul telefono.'}
+            {signedIn ? t('home.noMatchesSignedIn') : t('home.noMatchesSignedOut')}
           </Text>
         </Card>
       )}

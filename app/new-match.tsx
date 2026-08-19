@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { DEFAULT_RULES, type PrimieraMode, type WinRule } from '../src/domain/rules'
+import { useTranslation } from '../src/i18n/useTranslation'
 import { createRemoteMatch } from '../src/lib/matches'
 import { useAuthStore } from '../src/store/auth-store'
 import { useLeaguesStore } from '../src/store/leagues-store'
@@ -15,29 +16,11 @@ import { suggestTeamNames } from '../src/ui/team-names'
 
 const PLACEHOLDER_COLOR = '#8A8580'
 
-const TARGETS = [
-  { value: '11', label: '11 punti' },
-  { value: '21', label: '21 punti' },
-] as const
-
-type TargetValue = (typeof TARGETS)[number]['value']
-
-const PRIMIERA_MODES: { value: PrimieraMode; label: string }[] = [
-  { value: 'manual', label: 'La sappiamo noi' },
-  { value: 'cards', label: "La calcola l'app" },
-]
-
-const YES_NO = [
-  { value: 'no', label: 'No' },
-  { value: 'si', label: 'Sì' },
-] as const
-
-type YesNo = (typeof YES_NO)[number]['value']
-
-const WIN_RULES: { value: WinRule; label: string }[] = [
-  { value: 'reach', label: 'Raggiungerlo' },
-  { value: 'exceed', label: 'Superarlo' },
-]
+// Solo i valori: le etichette si costruiscono dentro il componente, dove
+// c'è la traduzione. Una costante di modulo si valuterebbe all'import, e
+// cambiare lingua non la aggiornerebbe più.
+type TargetValue = '11' | '21'
+type YesNo = 'no' | 'si'
 
 function NameField({
   label,
@@ -80,6 +63,7 @@ function NameField({
 
 export default function NewMatchScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const params = useLocalSearchParams<{ league?: string }>()
   const leagueId = params.league ?? null
   const league = useLeaguesStore((state) =>
@@ -140,19 +124,39 @@ export default function NewMatchScreen() {
         })
         router.replace(`/match?remote=${created.id}`)
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'Qualcosa è andato storto.')
+        setError(cause instanceof Error ? cause.message : t('common.error'))
       } finally {
         setBusy(false)
       }
     })()
   }
 
+  const targets: { value: TargetValue; label: string }[] = [
+    { value: '11', label: t('newMatch.target11') },
+    { value: '21', label: t('newMatch.target21') },
+  ]
+
+  const yesNo: { value: YesNo; label: string }[] = [
+    { value: 'no', label: t('common.no') },
+    { value: 'si', label: t('common.yes') },
+  ]
+
+  const winRules: { value: WinRule; label: string }[] = [
+    { value: 'reach', label: t('newMatch.reach') },
+    { value: 'exceed', label: t('newMatch.exceed') },
+  ]
+
+  const primieraModes: { value: PrimieraMode; label: string }[] = [
+    { value: 'manual', label: t('newMatch.primieraManual') },
+    { value: 'cards', label: t('newMatch.primieraCards') },
+  ]
+
   return (
     <Screen
       scroll
       footer={
         <Button
-          label={busy ? 'Creazione in corso…' : 'Inizia partita'}
+          label={busy ? t('newMatch.creating') : t('newMatch.start')}
           onPress={start}
           disabled={busy}
           testID="inizia-partita"
@@ -160,21 +164,21 @@ export default function NewMatchScreen() {
       }
     >
       <View className="flex-row items-center justify-between pt-2">
-        <Text className="font-bold text-2xl text-ink">Nuova partita</Text>
+        <Text className="font-bold text-2xl text-ink">{t('newMatch.title')}</Text>
         <Pressable
           testID="annulla-nuova-partita"
           accessibilityRole="button"
           onPress={() => router.back()}
           className="px-2 py-1 active:opacity-60"
         >
-          <Text className="text-base text-muted">Annulla</Text>
+          <Text className="text-base text-muted">{t('common.cancel')}</Text>
         </Pressable>
       </View>
 
       {league ? (
         <View className="rounded-xl bg-felt/10 px-3 py-2">
           <Text className="text-felt text-sm">
-            Nella lega {league.name}: gli altri membri potranno seguirla mentre giocate.
+            {t('newMatch.inLeague', { lega: league.name })}
           </Text>
         </View>
       ) : null}
@@ -185,10 +189,10 @@ export default function NewMatchScreen() {
         </View>
       ) : null}
 
-      <Card title="Squadre" subtitle="Lascia il nome suggerito o scrivi il tuo.">
+      <Card title={t('newMatch.teams')} subtitle={t('newMatch.teamsHint')}>
         <View className="flex-row gap-3">
           <NameField
-            label="Squadra 1"
+            label={t('newMatch.teamA')}
             placeholder={suggested.A}
             value={nameA}
             onChange={setNameA}
@@ -196,7 +200,7 @@ export default function NewMatchScreen() {
             testID="nome-squadra-a"
           />
           <NameField
-            label="Squadra 2"
+            label={t('newMatch.teamB')}
             placeholder={suggested.B}
             value={nameB}
             onChange={setNameB}
@@ -206,81 +210,66 @@ export default function NewMatchScreen() {
         </View>
       </Card>
 
-      <Card title="Traguardo" subtitle="A pari punti si gioca la mano di spareggio.">
+      <Card title={t('newMatch.target')} subtitle={t('newMatch.targetHint')}>
         <View className="gap-4">
-          <Segmented
-            options={[...TARGETS]}
-            value={target}
-            onChange={setTarget}
-            testID="traguardo"
-          />
+          <Segmented options={targets} value={target} onChange={setTarget} testID="traguardo" />
           <View>
-            <Text className="mb-2 text-ink text-sm">Per vincere serve</Text>
+            <Text className="mb-2 text-ink text-sm">{t('newMatch.winRule')}</Text>
             <Segmented
-              options={WIN_RULES}
+              options={winRules}
               value={winRule}
               onChange={setWinRule}
               testID="regola-vittoria"
             />
             <Text className="mt-1.5 text-muted text-xs">
               {winRule === 'reach'
-                ? `Si vince arrivando a ${target} punti.`
-                : `A ${target} punti si continua: per vincere servono almeno ${Number(target) + 1} punti.`}
+                ? t('newMatch.reachHint', { punti: target })
+                : t('newMatch.exceedHint', {
+                    punti: target,
+                    minimo: Number(target) + 1,
+                  })}
             </Text>
           </View>
         </View>
       </Card>
 
-      <Card
-        title="Varianti"
-        subtitle="Le impostazioni di partenza sono quelle dello scopone scientifico."
-      >
+      <Card title={t('newMatch.variants')} subtitle={t('newMatch.variantsHint')}>
         <View className="gap-4">
           <View>
-            <Text className="mb-2 text-ink text-sm">Primiera</Text>
+            <Text className="mb-2 text-ink text-sm">{t('newMatch.primiera')}</Text>
             <Segmented
-              options={[...YES_NO]}
+              options={yesNo}
               value={primiera}
               onChange={setPrimiera}
               testID="primiera-attiva"
             />
             {primiera === 'no' ? (
-              <Text className="mt-1.5 text-muted text-xs">
-                Ogni mano assegnerà tre punti base invece di quattro.
-              </Text>
+              <Text className="mt-1.5 text-muted text-xs">{t('newMatch.primieraOffHint')}</Text>
             ) : (
               <View className="mt-3">
-                <Text className="mb-2 text-ink text-sm">Come la inserite</Text>
+                <Text className="mb-2 text-ink text-sm">{t('newMatch.primieraMode')}</Text>
                 <Segmented
-                  options={PRIMIERA_MODES}
+                  options={primieraModes}
                   value={primieraMode}
                   onChange={setPrimieraMode}
                   testID="primiera-modo"
                 />
                 <Text className="mt-1.5 text-muted text-xs">
                   {primieraMode === 'manual'
-                    ? 'A fine mano scegli solo chi l’ha vinta.'
-                    : 'A fine mano indichi la carta migliore di ogni seme e l’app fa il conto.'}
+                    ? t('newMatch.primieraManualHint')
+                    : t('newMatch.primieraCardsHint')}
                 </Text>
               </View>
             )}
           </View>
           <View>
-            <Text className="mb-2 text-ink text-sm">Napola</Text>
-            <Segmented
-              options={[...YES_NO]}
-              value={napola}
-              onChange={setNapola}
-              testID="napola"
-            />
-            <Text className="mt-1.5 text-muted text-xs">
-              Asso, due e tre di denari valgono tre punti, più uno per ogni denaro consecutivo
-              in più.
-            </Text>
+            <Text className="mb-2 text-ink text-sm">{t('newMatch.napola')}</Text>
+            <Segmented options={yesNo} value={napola} onChange={setNapola} testID="napola" />
+            <Text className="mt-1.5 text-muted text-xs">{t('newMatch.napolaHint')}</Text>
           </View>
           <View>
-            <Text className="mb-2 text-ink text-sm">Donna di denari</Text>
-            <Segmented options={[...YES_NO]} value={donna} onChange={setDonna} testID="donna" />
+            <Text className="mb-2 text-ink text-sm">{t('newMatch.donna')}</Text>
+            <Segmented options={yesNo} value={donna} onChange={setDonna} testID="donna" />
           </View>
         </View>
       </Card>

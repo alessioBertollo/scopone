@@ -3,6 +3,7 @@ import type { HandInput } from '../domain/hand'
 import { type Match, scoreMatch } from '../domain/match'
 import type { RuleSet } from '../domain/rules'
 import type { ByTeam, TeamId } from '../domain/teams'
+import { tr } from '../i18n/tr'
 import type { MatchRow, MatchStatus } from './database.types'
 import { getSupabase } from './supabase'
 
@@ -21,13 +22,19 @@ export type RemoteMatch = {
 
 export type MatchLineup = { profileId: string; team: TeamId }
 
+/**
+ * Sono funzioni e non stringhe perché l'oggetto viene valutato all'import:
+ * tradurre qui congelerebbe la lingua a quella del primo caricamento, e chi
+ * la cambia dalle impostazioni continuerebbe a leggere errori in italiano.
+ */
 const MESSAGES = {
-  network: 'Nessuna connessione. Controlla la rete e riprova.',
-  notAllowed: 'Solo chi ha avviato la partita può modificarla.',
-  notFound: 'Partita non trovata, o non fai parte della lega.',
-  createFailed: 'Non è stato possibile creare la partita. Riprova.',
-  saveFailed: 'Non è stato possibile salvare la mano. Riprova.',
-  loadFailed: 'Non è stato possibile caricare le partite. Riprova.',
+  network: () => tr('matches.network'),
+  notAllowed: () => tr('matches.notAllowed'),
+  notFound: () => tr('matches.notFound'),
+  createFailed: () => tr('matches.createFailed'),
+  saveFailed: () => tr('matches.saveFailed'),
+  loadFailed: () => tr('matches.loadFailed'),
+  signInRequired: () => tr('matches.signInRequired'),
 } as const
 
 const COLUMNS =
@@ -40,10 +47,10 @@ const COLUMNS =
  */
 function translate(error: { code?: string; message?: string } | null, fallback: string): Error {
   if (!error) return new Error(fallback)
-  if (error.code === '42501') return new Error(MESSAGES.notAllowed)
-  if (error.code === 'PGRST116') return new Error(MESSAGES.notFound)
+  if (error.code === '42501') return new Error(MESSAGES.notAllowed())
+  if (error.code === 'PGRST116') return new Error(MESSAGES.notFound())
   if (/fetch|network|Failed to fetch/i.test(error.message ?? ''))
-    return new Error(MESSAGES.network)
+    return new Error(MESSAGES.network())
   return new Error(fallback)
 }
 
@@ -72,7 +79,7 @@ export async function createRemoteMatch(input: {
 }): Promise<RemoteMatch> {
   const supabase = getSupabase()
   const me = await viewerId()
-  if (!me) throw new Error('Serve accedere per giocare in lega.')
+  if (!me) throw new Error(MESSAGES.signInRequired())
 
   const { data, error } = await supabase
     .from('matches')
@@ -86,7 +93,7 @@ export async function createRemoteMatch(input: {
     .select(COLUMNS)
     .single()
 
-  if (error || !data) throw translate(error, MESSAGES.createFailed)
+  if (error || !data) throw translate(error, MESSAGES.createFailed())
   const created = toRemoteMatch(data as MatchRow, me)
 
   // La formazione è ciò che rende possibili le classifiche per giocatore:
@@ -99,7 +106,7 @@ export async function createRemoteMatch(input: {
         team: player.team,
       })),
     )
-    if (lineupError) throw translate(lineupError, MESSAGES.createFailed)
+    if (lineupError) throw translate(lineupError, MESSAGES.createFailed())
   }
 
   return created
@@ -122,7 +129,7 @@ export async function saveHands(matchId: string, hands: HandInput[]): Promise<Re
     .select(COLUMNS)
     .single()
 
-  if (error || !data) throw translate(error, MESSAGES.saveFailed)
+  if (error || !data) throw translate(error, MESSAGES.saveFailed())
   return toRemoteMatch(data as MatchRow, me)
 }
 
@@ -140,7 +147,7 @@ export async function setMatchStatus(
     .select(COLUMNS)
     .single()
 
-  if (error || !data) throw translate(error, MESSAGES.saveFailed)
+  if (error || !data) throw translate(error, MESSAGES.saveFailed())
   return toRemoteMatch(data as MatchRow, me)
 }
 
@@ -153,7 +160,7 @@ export async function getRemoteMatch(matchId: string): Promise<RemoteMatch> {
     .select(COLUMNS)
     .eq('id', matchId)
     .single()
-  if (error || !data) throw translate(error, MESSAGES.notFound)
+  if (error || !data) throw translate(error, MESSAGES.notFound())
   return toRemoteMatch(data as MatchRow, me)
 }
 
@@ -169,7 +176,7 @@ export async function listLeagueMatches(leagueId: string, limit = 20): Promise<R
     .order('updated_at', { ascending: false })
     .limit(limit)
 
-  if (error) throw translate(error, MESSAGES.loadFailed)
+  if (error) throw translate(error, MESSAGES.loadFailed())
   return (data as MatchRow[]).map((row) => toRemoteMatch(row, me))
 }
 
@@ -187,7 +194,7 @@ export async function listMyMatches(limit = 20): Promise<RemoteMatch[]> {
     .order('updated_at', { ascending: false })
     .limit(limit)
 
-  if (error) throw translate(error, MESSAGES.loadFailed)
+  if (error) throw translate(error, MESSAGES.loadFailed())
   return (data as MatchRow[]).map((row) => toRemoteMatch(row, me))
 }
 

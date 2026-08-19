@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
+import { tr } from '../i18n/tr'
 import type { ProfileRow } from './database.types'
 import { getSupabase } from './supabase'
 
@@ -17,30 +18,40 @@ const NAME_MAX = 40
 const CODE_LENGTH = 6
 
 /**
- * Un messaggio per ogni cosa che può andare storta, in italiano e con dentro
- * la mossa successiva. Gli errori di Supabase parlano di token, di HTTP e di
- * flow: chi sta solo cercando di entrare non ci ricava niente.
+ * Un messaggio per ogni cosa che può andare storta, con dentro la mossa
+ * successiva. Gli errori di Supabase parlano di token, di HTTP e di flow: chi
+ * sta solo cercando di entrare non ci ricava niente.
+ *
+ * Sono funzioni e non stringhe perché l'oggetto viene valutato all'import:
+ * tradurre qui congelerebbe la lingua a quella del primo caricamento, e chi
+ * la cambia dalle impostazioni continuerebbe a leggere errori in italiano.
  */
 const MESSAGES = {
-  network: 'Nessuna connessione. Controlla la rete e riprova.',
-  invalidEmail: 'Indirizzo email non valido.',
-  malformedCode: `Il codice è di ${CODE_LENGTH} cifre.`,
-  wrongCode: 'Codice errato. Controlla le cifre e riprova.',
-  expiredCode: 'Codice non valido o scaduto. Fattene mandare uno nuovo.',
-  tooManyRequests: 'Troppi tentativi. Aspetta qualche minuto e riprova.',
-  signInDisabled: 'Con questo indirizzo non si può accedere.',
-  banned: 'Questo account è bloccato.',
-  noSession: 'Sessione scaduta. Accedi di nuovo.',
-  nameLength: `Il nome deve avere da ${NAME_MIN} a ${NAME_MAX} caratteri.`,
-  sendFailed: 'Non è stato possibile inviare il codice. Riprova.',
-  verifyFailed: 'Accesso non riuscito. Riprova.',
-  signOutFailed: 'Uscita non riuscita. Riprova.',
-  saveNameFailed: 'Non è stato possibile salvare il nome. Riprova.',
-  deleteFailed: "Non è stato possibile cancellare l'account. Riprova.",
+  network: () => tr('auth.network'),
+  invalidEmail: () => tr('auth.invalidEmail'),
+  malformedCode: () => tr('auth.malformedCode', { cifre: CODE_LENGTH }),
+  wrongCode: () => tr('auth.wrongCode'),
+  expiredCode: () => tr('auth.expiredCode'),
+  tooManyRequests: () => tr('auth.tooManyRequests'),
+  signInDisabled: () => tr('auth.signInDisabled'),
+  banned: () => tr('auth.banned'),
+  noSession: () => tr('auth.noSession'),
+  nameLength: () => tr('auth.nameLength', { minimo: NAME_MIN, massimo: NAME_MAX }),
+  sendFailed: () => tr('auth.sendFailed'),
+  verifyFailed: () => tr('auth.verifyFailed'),
+  signOutFailed: () => tr('auth.signOutFailed'),
+  saveNameFailed: () => tr('auth.saveNameFailed'),
+  deleteFailed: () => tr('auth.deleteFailed'),
 } as const
 
-/** Nome di ripiego quando il profilo non è leggibile: lo stesso che sceglie il trigger. */
-const FALLBACK_NAME = 'Giocatore'
+/**
+ * Nome di ripiego quando il profilo non è leggibile. Il trigger sul database
+ * ne sceglie uno in italiano, ma quello è un dato: questo è solo ciò che si
+ * legge a schermo finché il nome vero non arriva, e segue la lingua scelta.
+ */
+function fallbackName(): string {
+  return tr('common.player')
+}
 
 export async function sendLoginCode(email: string): Promise<void> {
   const address = requireEmail(email)
@@ -52,7 +63,7 @@ export async function sendLoginCode(email: string): Promise<void> {
     options: { shouldCreateUser: true },
   })
 
-  if (error) throw translate(error, MESSAGES.sendFailed)
+  if (error) throw translate(error, MESSAGES.sendFailed())
 }
 
 export async function verifyLoginCode(email: string, code: string): Promise<AuthUser> {
@@ -65,17 +76,17 @@ export async function verifyLoginCode(email: string, code: string): Promise<Auth
     token,
     type: 'email',
   })
-  if (error) throw translate(error, MESSAGES.verifyFailed)
+  if (error) throw translate(error, MESSAGES.verifyFailed())
 
   const user = data.user ?? data.session?.user
-  if (!user) throw new Error(MESSAGES.verifyFailed)
+  if (!user) throw new Error(MESSAGES.verifyFailed())
 
   return toAuthUser(supabase, user)
 }
 
 export async function signOut(): Promise<void> {
   const { error } = await getSupabase().auth.signOut()
-  if (error) throw translate(error, MESSAGES.signOutFailed)
+  if (error) throw translate(error, MESSAGES.signOutFailed())
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -84,7 +95,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   // `getSession` legge la sessione già salvata e non chiama il server:
   // all'avvio conta partire subito, e `getUser` senza rete fallirebbe.
   const { data, error } = await supabase.auth.getSession()
-  if (error) throw translate(error, MESSAGES.noSession)
+  if (error) throw translate(error, MESSAGES.noSession())
 
   const user = data.session?.user
   if (!user) return null
@@ -95,7 +106,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 export async function updateDisplayName(name: string): Promise<AuthUser> {
   const displayName = name.trim()
   if (displayName.length < NAME_MIN || displayName.length > NAME_MAX) {
-    throw new Error(MESSAGES.nameLength)
+    throw new Error(MESSAGES.nameLength())
   }
 
   const supabase = getSupabase()
@@ -108,7 +119,7 @@ export async function updateDisplayName(name: string): Promise<AuthUser> {
     .select('id, display_name, created_at')
     .single()
 
-  if (error) throw translate(error, MESSAGES.saveNameFailed)
+  if (error) throw translate(error, MESSAGES.saveNameFailed())
 
   const row = data as ProfileRow | null
   return { id: user.id, email: user.email ?? '', displayName: row?.display_name ?? displayName }
@@ -118,10 +129,10 @@ export async function updateDisplayName(name: string): Promise<AuthUser> {
 
 async function requireUser(supabase: SupabaseClient): Promise<User> {
   const { data, error } = await supabase.auth.getSession()
-  if (error) throw translate(error, MESSAGES.noSession)
+  if (error) throw translate(error, MESSAGES.noSession())
 
   const user = data.session?.user
-  if (!user) throw new Error(MESSAGES.noSession)
+  if (!user) throw new Error(MESSAGES.noSession())
 
   return user
 }
@@ -159,7 +170,7 @@ async function readDisplayName(supabase: SupabaseClient, id: string): Promise<st
 /** Stessa regola del trigger `create_profile_for_new_user`, così i due nomi coincidono. */
 function nameFromEmail(email: string): string {
   const local = email.split('@')[0]?.trim()
-  return local ? local : FALLBACK_NAME
+  return local ? local : fallbackName()
 }
 
 /**
@@ -168,7 +179,7 @@ function nameFromEmail(email: string): string {
  */
 function requireEmail(email: string): string {
   const address = email.trim().toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) throw new Error(MESSAGES.invalidEmail)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) throw new Error(MESSAGES.invalidEmail())
   return address
 }
 
@@ -176,7 +187,7 @@ function requireCode(code: string): string {
   // Chi incolla il codice dalla mail si porta dietro spazi e a capo.
   const digits = code.replace(/\s+/g, '')
   if (digits.length !== CODE_LENGTH || !/^\d+$/.test(digits)) {
-    throw new Error(MESSAGES.malformedCode)
+    throw new Error(MESSAGES.malformedCode())
   }
   return digits
 }
@@ -230,41 +241,41 @@ function translate(error: unknown, fallback: string): Error {
     status === 0 ||
     (message !== undefined &&
       /failed to fetch|network request failed|networkerror/i.test(message))
-  if (offline) return fail(MESSAGES.network, error)
+  if (offline) return fail(MESSAGES.network(), error)
 
   switch (code) {
     // Con un codice sbagliato GoTrue risponde `otp_expired` esattamente come
     // con uno scaduto: i due casi non sono distinguibili, e il messaggio li
     // copre entrambi.
     case 'otp_expired':
-      return fail(MESSAGES.expiredCode, error)
+      return fail(MESSAGES.expiredCode(), error)
     case 'invalid_credentials':
-      return fail(MESSAGES.wrongCode, error)
+      return fail(MESSAGES.wrongCode(), error)
     case 'validation_failed':
     case 'email_address_invalid':
-      return fail(MESSAGES.invalidEmail, error)
+      return fail(MESSAGES.invalidEmail(), error)
     case 'over_email_send_rate_limit':
     case 'over_request_rate_limit':
-      return fail(MESSAGES.tooManyRequests, error)
+      return fail(MESSAGES.tooManyRequests(), error)
     case 'user_banned':
-      return fail(MESSAGES.banned, error)
+      return fail(MESSAGES.banned(), error)
     case 'signup_disabled':
     case 'email_provider_disabled':
     case 'email_address_not_authorized':
-      return fail(MESSAGES.signInDisabled, error)
+      return fail(MESSAGES.signInDisabled(), error)
     case 'session_expired':
     case 'session_not_found':
     case 'refresh_token_not_found':
     case 'bad_jwt':
-      return fail(MESSAGES.noSession, error)
+      return fail(MESSAGES.noSession(), error)
     // Codice SQLSTATE di PostgREST: il check sulla lunghezza del nome.
     case '23514':
-      return fail(MESSAGES.nameLength, error)
+      return fail(MESSAGES.nameLength(), error)
     default:
       break
   }
 
-  if (status === 429) return fail(MESSAGES.tooManyRequests, error)
+  if (status === 429) return fail(MESSAGES.tooManyRequests(), error)
 
   return fail(fallback, error)
 }
@@ -282,7 +293,7 @@ export async function deleteAccount(): Promise<void> {
   await requireUser(supabase)
 
   const { error } = await supabase.rpc('delete_my_account')
-  if (error) throw translate(error, MESSAGES.deleteFailed)
+  if (error) throw translate(error, MESSAGES.deleteFailed())
 
   // Il token è già firmato e resta valido finché non lo si butta: nessuno
   // lo revoca al posto nostro solo perché l'utente non esiste più.

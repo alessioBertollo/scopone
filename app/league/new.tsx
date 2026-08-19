@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
+import { useTranslation } from '../../src/i18n/useTranslation'
 import type { League } from '../../src/lib/leagues'
 import { isBackendConfigured } from '../../src/lib/supabase'
 import { useAuthStore } from '../../src/store/auth-store'
@@ -12,12 +13,9 @@ import { Segmented } from '../../src/ui/Segmented'
 
 const PLACEHOLDER_COLOR = '#8A8580'
 
-const MODES = [
-  { value: 'create', label: 'Creane una' },
-  { value: 'join', label: 'Entra con un codice' },
-] as const
-
-type Mode = (typeof MODES)[number]['value']
+// Solo i valori: le etichette si costruiscono dentro il componente, dove c'è
+// la traduzione. Una costante di modulo si valuterebbe una volta all'import.
+type Mode = 'create' | 'join'
 
 function ErrorNote({ message }: { message: string }) {
   return (
@@ -29,16 +27,18 @@ function ErrorNote({ message }: { message: string }) {
 
 /** Titolo e uscita, identici nei tre stati della schermata. */
 function Intestazione({ onAnnulla }: { onAnnulla: () => void }) {
+  const { t } = useTranslation()
+
   return (
     <View className="flex-row items-center justify-between pt-2">
-      <Text className="font-bold text-2xl text-ink">Leghe</Text>
+      <Text className="font-bold text-2xl text-ink">{t('league.title')}</Text>
       <Pressable
         testID="annulla-nuova-lega"
         accessibilityRole="button"
         onPress={onAnnulla}
         className="px-2 py-1 active:opacity-60"
       >
-        <Text className="text-base text-muted">Annulla</Text>
+        <Text className="text-base text-muted">{t('common.cancel')}</Text>
       </Pressable>
     </View>
   )
@@ -46,6 +46,7 @@ function Intestazione({ onAnnulla }: { onAnnulla: () => void }) {
 
 export default function NewLeagueScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const authStatus = useAuthStore((state) => state.status)
   const create = useLeaguesStore((state) => state.create)
   const join = useLeaguesStore((state) => state.join)
@@ -72,7 +73,7 @@ export default function NewLeagueScreen() {
       // tornarci sopra dal dettaglio riproporrebbe un modulo già compilato.
       router.replace(`/league/${league.id}`)
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Qualcosa è andato storto.')
+      setError(cause instanceof Error ? cause.message : t('common.error'))
     } finally {
       setBusy(false)
     }
@@ -82,14 +83,13 @@ export default function NewLeagueScreen() {
     return (
       <Screen
         scroll
-        footer={<Button label="Torna indietro" testID="chiudi-nuova-lega" onPress={annulla} />}
+        footer={
+          <Button label={t('common.back')} testID="chiudi-nuova-lega" onPress={annulla} />
+        }
       >
         <Intestazione onAnnulla={annulla} />
         <Card>
-          <Text className="text-ink text-sm">
-            Questa copia dell'app non è collegata a nessun server, quindi le leghe non sono
-            disponibili. Le partite al tavolo funzionano lo stesso.
-          </Text>
+          <Text className="text-ink text-sm">{t('league.noBackend')}</Text>
         </Card>
       </Screen>
     )
@@ -105,7 +105,7 @@ export default function NewLeagueScreen() {
         scroll
         footer={
           <Button
-            label={attesa ? 'Un attimo…' : 'Accedi'}
+            label={attesa ? t('league.wait') : t('league.signIn')}
             testID="vai-accesso-lega"
             disabled={attesa}
             onPress={() => router.push('/sign-in')}
@@ -113,11 +113,8 @@ export default function NewLeagueScreen() {
         }
       >
         <Intestazione onAnnulla={annulla} />
-        <Card title="Serve un account">
-          <Text className="text-ink text-sm">
-            Una lega mette in comune le partite di un gruppo, quindi ha bisogno di sapere chi
-            sei. L'accesso è con un codice via email, senza password.
-          </Text>
+        <Card title={t('league.needAccount')}>
+          <Text className="text-ink text-sm">{t('league.needAccountBody')}</Text>
           {attesa ? <ActivityIndicator className="mt-3" /> : null}
         </Card>
       </Screen>
@@ -127,20 +124,25 @@ export default function NewLeagueScreen() {
   const crea = () => run(() => create(name))
   const entra = () => run(() => join(code))
 
+  const modi: { value: Mode; label: string }[] = [
+    { value: 'create', label: t('league.modeCreate') },
+    { value: 'join', label: t('league.modeJoin') },
+  ]
+
   return (
     <Screen
       scroll
       footer={
         mode === 'create' ? (
           <Button
-            label={busy ? 'Creazione in corso…' : 'Crea la lega'}
+            label={busy ? t('league.creating') : t('league.create')}
             testID="conferma-crea-lega"
             disabled={busy || name.trim().length < 2}
             onPress={crea}
           />
         ) : (
           <Button
-            label={busy ? 'Ingresso in corso…' : 'Entra'}
+            label={busy ? t('league.joining') : t('league.join')}
             testID="conferma-entra-lega"
             disabled={busy || code.trim().length !== 6}
             onPress={entra}
@@ -151,7 +153,7 @@ export default function NewLeagueScreen() {
       <Intestazione onAnnulla={annulla} />
 
       <Segmented
-        options={[...MODES]}
+        options={modi}
         value={mode}
         onChange={(value) => {
           setMode(value)
@@ -165,26 +167,21 @@ export default function NewLeagueScreen() {
       {error ? <ErrorNote message={error} /> : null}
 
       {mode === 'create' ? (
-        <Card title="Nome della lega" subtitle="Lo vedranno tutti i partecipanti.">
+        <Card title={t('league.name')} subtitle={t('league.nameHint')}>
           <TextInput
             testID="campo-nome-lega"
             value={name}
             onChangeText={setName}
             editable={!busy}
             maxLength={60}
-            placeholder="Torneo del giovedì"
+            placeholder={t('league.namePlaceholder')}
             placeholderTextColor={PLACEHOLDER_COLOR}
             className="rounded-xl bg-sunken px-4 py-3 text-base text-ink"
           />
-          <Text className="mt-2 text-muted text-xs">
-            Riceverai un codice di sei caratteri da dettare agli altri.
-          </Text>
+          <Text className="mt-2 text-muted text-xs">{t('league.codeAfterCreate')}</Text>
         </Card>
       ) : (
-        <Card
-          title="Codice di invito"
-          subtitle="Sei caratteri, te li detta chi ha creato la lega."
-        >
+        <Card title={t('league.inviteCode')} subtitle={t('league.inviteCodeHint')}>
           <TextInput
             testID="campo-codice-lega"
             value={code}

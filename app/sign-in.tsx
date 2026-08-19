@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
+import { useTranslation } from '../src/i18n/useTranslation'
 import { isBackendConfigured } from '../src/lib/supabase'
 import { useAuthStore } from '../src/store/auth-store'
 import { Button } from '../src/ui/Button'
@@ -24,6 +25,7 @@ function ErrorNote({ message }: { message: string }) {
  */
 export default function SignInScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const sendCode = useAuthStore((state) => state.sendCode)
   const verifyCode = useAuthStore((state) => state.verifyCode)
 
@@ -42,7 +44,7 @@ export default function SignInScreen() {
       await action()
       onDone()
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Qualcosa è andato storto.')
+      setError(cause instanceof Error ? cause.message : t('common.error'))
     } finally {
       setBusy(false)
     }
@@ -61,13 +63,10 @@ export default function SignInScreen() {
 
   if (!isBackendConfigured) {
     return (
-      <Screen scroll footer={<Button label="Torna indietro" onPress={() => router.back()} />}>
-        <Text className="pt-2 font-bold text-2xl text-ink">Accedi</Text>
+      <Screen scroll footer={<Button label={t('common.back')} onPress={() => router.back()} />}>
+        <Text className="pt-2 font-bold text-2xl text-ink">{t('signIn.title')}</Text>
         <Card>
-          <Text className="text-ink text-sm">
-            Questa copia dell'app non è collegata a nessun server, quindi l'accesso non è
-            disponibile. Le partite in solitaria funzionano lo stesso.
-          </Text>
+          <Text className="text-ink text-sm">{t('signIn.noBackend')}</Text>
         </Card>
       </Screen>
     )
@@ -79,7 +78,7 @@ export default function SignInScreen() {
       footer={
         step === 'email' ? (
           <Button
-            label={busy ? 'Invio in corso…' : 'Mandami il codice'}
+            label={busy ? t('signIn.sending') : t('signIn.sendCode')}
             testID="invia-codice"
             disabled={busy || !email.includes('@')}
             onPress={invia}
@@ -87,13 +86,13 @@ export default function SignInScreen() {
         ) : (
           <View className="gap-2">
             <Button
-              label={busy ? 'Verifica in corso…' : 'Entra'}
+              label={busy ? t('signIn.verifying') : t('signIn.enter')}
               testID="verifica-codice"
               disabled={busy || code.length < 6}
               onPress={entra}
             />
             <Button
-              label="Cambia indirizzo"
+              label={t('signIn.changeEmail')}
               variant="ghost"
               disabled={busy}
               onPress={() => {
@@ -107,26 +106,23 @@ export default function SignInScreen() {
       }
     >
       <View className="flex-row items-center justify-between pt-2">
-        <Text className="font-bold text-2xl text-ink">Accedi</Text>
+        <Text className="font-bold text-2xl text-ink">{t('signIn.title')}</Text>
         <Pressable
           testID="annulla-accesso"
           accessibilityRole="button"
           onPress={() => router.back()}
           className="px-2 py-1 active:opacity-60"
         >
-          <Text className="text-base text-muted">Annulla</Text>
+          <Text className="text-base text-muted">{t('common.cancel')}</Text>
         </Pressable>
       </View>
 
-      <Text className="text-muted text-sm">
-        Serve solo per le leghe. Per contare una partita al tavolo non ti serve nessun account,
-        e continuerà a essere così.
-      </Text>
+      <Text className="text-muted text-sm">{t('signIn.why')}</Text>
 
       {error ? <ErrorNote message={error} /> : null}
 
       {step === 'email' ? (
-        <Card title="La tua email">
+        <Card title={t('signIn.emailTitle')}>
           <TextInput
             testID="campo-email"
             value={email}
@@ -136,16 +132,14 @@ export default function SignInScreen() {
             autoCorrect={false}
             keyboardType="email-address"
             textContentType="emailAddress"
-            placeholder="nome@esempio.it"
+            placeholder={t('signIn.emailPlaceholder')}
             placeholderTextColor={PLACEHOLDER_COLOR}
             className="rounded-xl bg-sunken px-4 py-3 text-base text-ink"
           />
-          <Text className="mt-2 text-muted text-xs">
-            Ti arriva un codice di sei cifre. Non impostiamo password.
-          </Text>
+          <Text className="mt-2 text-muted text-xs">{t('signIn.emailHint')}</Text>
         </Card>
       ) : (
-        <Card title="Il codice ricevuto" subtitle={`Inviato a ${email}`}>
+        <Card title={t('signIn.codeTitle')} subtitle={t('signIn.sentTo', { email })}>
           <TextInput
             testID="campo-codice"
             value={code}

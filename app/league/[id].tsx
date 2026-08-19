@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
+import { useTranslation } from '../../src/i18n/useTranslation'
 import { getLeague, type League, type LeagueMember } from '../../src/lib/leagues'
 import { listLeagueMatches, type RemoteMatch, summarise } from '../../src/lib/matches'
 import { useLeaguesStore } from '../../src/store/leagues-store'
@@ -10,10 +11,14 @@ import { Screen } from '../../src/ui/Screen'
 
 type Dettaglio = { league: League; members: LeagueMember[] }
 
-function messaggio(cause: unknown): string {
-  return cause instanceof Error && cause.message.length > 0
-    ? cause.message
-    : 'Qualcosa è andato storto.'
+/**
+ * Le due funzioni qui sotto stanno fuori dal componente e non possono usare
+ * l'hook: la traduzione gliela passa chi le chiama.
+ */
+type Traduci = ReturnType<typeof useTranslation>['t']
+
+function messaggio(cause: unknown, t: Traduci): string {
+  return cause instanceof Error && cause.message.length > 0 ? cause.message : t('common.error')
 }
 
 function ErrorNote({ message }: { message: string }) {
@@ -33,26 +38,29 @@ function SectionTitle({ children }: { children: string }) {
  * `try`: le mani sono dati scritti da altri dispositivi, e una partita che
  * questa versione non sa leggere non deve portarsi via l'intera schermata.
  */
-function riepilogo(remote: RemoteMatch): { punteggio: string; esito: string } {
+function riepilogo(remote: RemoteMatch, t: Traduci): { punteggio: string; esito: string } {
   const { A, B } = remote.match.teamNames
 
   try {
     const { score, finished, winnerName } = summarise(remote)
 
-    if (remote.status === 'abandoned') return { punteggio: score, esito: 'Abbandonata' }
-    if (!finished) return { punteggio: score, esito: 'In corso' }
+    if (remote.status === 'abandoned') {
+      return { punteggio: score, esito: t('league.matchAbandoned') }
+    }
+    if (!finished) return { punteggio: score, esito: t('league.matchOngoing') }
 
     return {
       punteggio: score,
-      esito: winnerName ? `Ha vinto ${winnerName}` : 'Conclusa in parità',
+      esito: winnerName ? t('league.matchWinner', { nome: winnerName }) : t('league.matchTie'),
     }
   } catch {
-    return { punteggio: `${A} – ${B}`, esito: 'Punteggio non leggibile su questa versione' }
+    return { punteggio: `${A} – ${B}`, esito: t('league.matchUnreadable') }
   }
 }
 
 export default function LeagueScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const { id } = useLocalSearchParams<{ id: string }>()
   const leave = useLeaguesStore((state) => state.leave)
   const remove = useLeaguesStore((state) => state.remove)
@@ -75,7 +83,7 @@ export default function LeagueScreen() {
       setDettaglio(await getLeague(id))
     } catch (cause) {
       setDettaglio(null)
-      setErroreLega(messaggio(cause))
+      setErroreLega(messaggio(cause, t))
       setCaricamento(false)
       return
     }
@@ -87,11 +95,11 @@ export default function LeagueScreen() {
       setMatches(await listLeagueMatches(id))
     } catch (cause) {
       setMatches([])
-      setErrore(messaggio(cause))
+      setErrore(messaggio(cause, t))
     } finally {
       setCaricamento(false)
     }
-  }, [id])
+  }, [id, t])
 
   useEffect(() => {
     void carica()
@@ -106,32 +114,32 @@ export default function LeagueScreen() {
       // e la lega non è più fra quelle a cui si può tornare indietro.
       router.replace('/')
     } catch (cause) {
-      setErrore(messaggio(cause))
+      setErrore(messaggio(cause, t))
     } finally {
       setBusy(false)
     }
   }
 
   const esci = () => {
-    Alert.alert(
-      'Uscire dalla lega?',
-      'Per rientrare ti servirà di nuovo il codice di invito.',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Esci', style: 'destructive', onPress: () => void agisci(() => leave(id)) },
-      ],
-    )
+    Alert.alert(t('league.leaveTitle'), t('league.leaveBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('league.leaveOk'),
+        style: 'destructive',
+        onPress: () => void agisci(() => leave(id)),
+      },
+    ])
   }
 
   const elimina = () => {
-    Alert.alert(
-      'Eliminare la lega?',
-      'Spariscono anche le partite e le iscrizioni di tutti. Non si torna indietro.',
-      [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Elimina', style: 'destructive', onPress: () => void agisci(() => remove(id)) },
-      ],
-    )
+    Alert.alert(t('league.deleteTitle'), t('league.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('league.deleteOk'),
+        style: 'destructive',
+        onPress: () => void agisci(() => remove(id)),
+      },
+    ])
   }
 
   if (caricamento && !dettaglio) {
@@ -139,7 +147,7 @@ export default function LeagueScreen() {
       <Screen>
         <View className="flex-1 items-center justify-center gap-3">
           <ActivityIndicator />
-          <Text className="text-muted text-sm">Carico la lega…</Text>
+          <Text className="text-muted text-sm">{t('league.loading')}</Text>
         </View>
       </Screen>
     )
@@ -151,9 +159,13 @@ export default function LeagueScreen() {
         scroll
         footer={
           <View className="gap-2">
-            <Button label="Riprova" testID="riprova-lega" onPress={() => void carica()} />
             <Button
-              label="Torna indietro"
+              label={t('league.retry')}
+              testID="riprova-lega"
+              onPress={() => void carica()}
+            />
+            <Button
+              label={t('common.back')}
               variant="ghost"
               testID="torna-indietro-lega"
               onPress={() => router.replace('/')}
@@ -161,11 +173,9 @@ export default function LeagueScreen() {
           </View>
         }
       >
-        <Text className="pt-2 font-bold text-2xl text-ink">Lega</Text>
-        <Card title="Non ci siamo">
-          <Text className="text-ink text-sm">
-            {erroreLega ?? 'Non è stato possibile caricare la lega. Riprova.'}
-          </Text>
+        <Text className="pt-2 font-bold text-2xl text-ink">{t('league.detailTitle')}</Text>
+        <Card title={t('league.loadErrorTitle')}>
+          <Text className="text-ink text-sm">{erroreLega ?? t('league.loadErrorBody')}</Text>
         </Card>
       </Screen>
     )
@@ -180,14 +190,14 @@ export default function LeagueScreen() {
       footer={
         <View className="gap-2">
           <Button
-            label="Nuova partita in questa lega"
+            label={t('league.newMatch')}
             testID="nuova-partita-lega"
             disabled={busy}
             onPress={() => router.push(`/new-match?league=${id}`)}
           />
           {proprietario ? (
             <Button
-              label="Elimina la lega"
+              label={t('league.delete')}
               variant="danger"
               testID="elimina-lega"
               disabled={busy}
@@ -195,7 +205,7 @@ export default function LeagueScreen() {
             />
           ) : (
             <Button
-              label="Esci dalla lega"
+              label={t('league.leave')}
               variant="danger"
               testID="esci-dalla-lega"
               disabled={busy}
@@ -209,14 +219,14 @@ export default function LeagueScreen() {
         <Text className="font-bold text-2xl text-ink">{league.name}</Text>
         <Text className="mt-1 text-muted text-sm">
           {league.memberCount === 1
-            ? 'Per ora ci sei solo tu'
-            : `Siete in ${league.memberCount}`}
+            ? t('league.onlyYou')
+            : t('league.memberCount', { numero: league.memberCount })}
         </Text>
       </View>
 
       {errore ? <ErrorNote message={errore} /> : null}
 
-      <Card title="Codice di invito" subtitle="Dettalo a chi vuoi far entrare nella lega.">
+      <Card title={t('league.inviteCode')} subtitle={t('league.inviteCodeShare')}>
         {/*
           Il codice si legge a voce agli altri: grande, spaziato e
           selezionabile, così si può anche copiare tenendolo premuto. Manca
@@ -230,11 +240,11 @@ export default function LeagueScreen() {
           {league.inviteCode}
         </Text>
         <Text className="mt-3 text-center text-muted text-xs">
-          Tienilo premuto per selezionarlo e copiarlo.
+          {t('league.inviteCodeCopy')}
         </Text>
       </Card>
 
-      <Card title={`Partecipanti · ${members.length}`}>
+      <Card title={t('league.members', { numero: members.length })}>
         <View className="gap-3">
           {members.map((membro) => (
             <View
@@ -245,26 +255,23 @@ export default function LeagueScreen() {
                 {membro.displayName}
               </Text>
               <Text className="text-muted text-xs uppercase tracking-widest">
-                {membro.role === 'owner' ? 'Fondatore' : 'Giocatore'}
+                {membro.role === 'owner' ? t('league.roleOwner') : t('league.rolePlayer')}
               </Text>
             </View>
           ))}
         </View>
       </Card>
 
-      <SectionTitle>Partite</SectionTitle>
+      <SectionTitle>{t('league.matches')}</SectionTitle>
 
       {matches.length === 0 ? (
         <Card>
-          <Text className="text-ink text-sm">Qui non si è ancora giocato niente.</Text>
-          <Text className="mt-1 text-muted text-sm">
-            Avvia la prima partita: gli altri della lega la vedranno aggiornarsi mentre la
-            giocate, senza poterla modificare.
-          </Text>
+          <Text className="text-ink text-sm">{t('league.noMatches')}</Text>
+          <Text className="mt-1 text-muted text-sm">{t('league.noMatchesHint')}</Text>
         </Card>
       ) : (
         matches.map((remote, indice) => {
-          const { punteggio, esito } = riepilogo(remote)
+          const { punteggio, esito } = riepilogo(remote, t)
 
           return (
             <Pressable

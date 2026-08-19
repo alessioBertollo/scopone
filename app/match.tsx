@@ -4,6 +4,8 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import type { HandScore, PointKind } from '../src/domain/hand'
 import { scoreMatch } from '../src/domain/match'
 import type { ByTeam, TeamId } from '../src/domain/teams'
+import type { TranslationKey } from '../src/i18n'
+import { useTranslation } from '../src/i18n/useTranslation'
 import { getRemoteMatch, type RemoteMatch, watchRemoteMatch } from '../src/lib/matches'
 import { useMatchState } from '../src/store/hooks'
 import { useMatchStore } from '../src/store/match-store'
@@ -12,14 +14,16 @@ import { Card } from '../src/ui/Card'
 import { cn } from '../src/ui/cn'
 import { Screen } from '../src/ui/Screen'
 
-const POINT_LABEL: Record<PointKind, string> = {
-  carte: 'Carte',
-  denari: 'Denari',
-  settebello: 'Settebello',
-  primiera: 'Primiera',
-  scope: 'Scope',
-  napola: 'Napola',
-  donna: 'Donna',
+// Chiavi e non testo: la mappa si valuta all'import, la traduzione avviene a
+// ogni render, così cambiare lingua ridisegna anche i gettoni dei punti.
+const POINT_KEY: Record<PointKind, TranslationKey> = {
+  carte: 'match.point.carte',
+  denari: 'match.point.denari',
+  settebello: 'match.point.settebello',
+  primiera: 'match.point.primiera',
+  scope: 'match.point.scope',
+  napola: 'match.point.napola',
+  donna: 'match.point.donna',
 }
 
 function TeamTotal({
@@ -35,6 +39,8 @@ function TeamTotal({
   team: TeamId
   isWinner: boolean
 }) {
+  const { t } = useTranslation()
+
   return (
     <View className="flex-1 items-center">
       <Text
@@ -56,7 +62,11 @@ function TeamTotal({
         {total}
       </Text>
       <Text className="mt-1 text-muted text-xs">
-        {isWinner ? 'Vittoria' : remaining > 0 ? `mancano ${remaining}` : 'al traguardo'}
+        {isWinner
+          ? t('match.won')
+          : remaining > 0
+            ? t('match.remaining', { punti: remaining })
+            : t('match.atTarget')}
       </Text>
     </View>
   )
@@ -84,6 +94,7 @@ function HandRow({
   /** Assente per chi sta solo seguendo: la riga resta leggibile ma inerte. */
   onPress?: () => void
 }) {
+  const { t } = useTranslation()
   const scored = score.awards.filter((award) => award.winner !== null)
   const modificabile = onPress !== undefined
 
@@ -91,7 +102,11 @@ function HandRow({
     <Pressable
       testID={`mano-${index}`}
       accessibilityRole={modificabile ? 'button' : 'text'}
-      accessibilityLabel={modificabile ? `Mano ${index + 1}, modifica` : `Mano ${index + 1}`}
+      accessibilityLabel={
+        modificabile
+          ? t('match.handEdit', { numero: index + 1 })
+          : t('match.hand', { numero: index + 1 })
+      }
       disabled={!modificabile}
       onPress={onPress}
       className={cn(
@@ -101,7 +116,7 @@ function HandRow({
     >
       <View className="flex-row items-center justify-between">
         <Text className="font-medium text-muted text-xs uppercase tracking-widest">
-          Mano {index + 1}
+          {t('match.hand', { numero: index + 1 })}
         </Text>
         <View className="flex-row items-baseline gap-1">
           <Text className="font-semibold text-base text-team-a tabular-nums">
@@ -121,8 +136,8 @@ function HandRow({
             team={award.winner as TeamId}
             label={
               award.value > 1
-                ? `${POINT_LABEL[award.kind]} ×${award.value}`
-                : POINT_LABEL[award.kind]
+                ? `${t(POINT_KEY[award.kind])} ×${award.value}`
+                : t(POINT_KEY[award.kind])
             }
           />
         ))}
@@ -133,6 +148,7 @@ function HandRow({
 
 export default function MatchScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const params = useLocalSearchParams<{ remote?: string }>()
   const remoteId = params.remote ?? null
 
@@ -159,7 +175,7 @@ export default function MatchScreen() {
       })
       .catch((cause: unknown) => {
         if (!annullato) {
-          setRemoteError(cause instanceof Error ? cause.message : 'Partita non raggiungibile.')
+          setRemoteError(cause instanceof Error ? cause.message : t('match.unreachable'))
         }
       })
 
@@ -171,7 +187,7 @@ export default function MatchScreen() {
       annullato = true
       smetti()
     }
-  }, [remoteId])
+  }, [remoteId, t])
 
   // Una partita remota con dati illeggibili non deve far sparire la schermata.
   let remoteState: ReturnType<typeof scoreMatch> | null = null
@@ -199,7 +215,7 @@ export default function MatchScreen() {
           {remoteError ? (
             <>
               <Text className="text-center text-danger text-sm">{remoteError}</Text>
-              <Button label="Torna indietro" variant="ghost" onPress={() => router.back()} />
+              <Button label={t('common.back')} variant="ghost" onPress={() => router.back()} />
             </>
           ) : (
             <ActivityIndicator />
@@ -216,30 +232,28 @@ export default function MatchScreen() {
         <View className="gap-2">
           {!puoModificare ? (
             <View className="rounded-xl bg-sunken px-3 py-3">
-              <Text className="text-center text-muted text-sm">
-                La sta conducendo chi l'ha avviata. Il tabellone si aggiorna da solo.
-              </Text>
+              <Text className="text-center text-muted text-sm">{t('match.watching')}</Text>
             </View>
           ) : finished ? (
             <Button
-              label="Nuova partita"
+              label={t('match.newMatch')}
               testID="nuova-partita"
               onPress={() => router.replace('/new-match')}
             />
           ) : (
             <Button
-              label="Aggiungi mano"
+              label={t('match.addHand')}
               testID="aggiungi-mano"
               onPress={() => router.push('/hand')}
             />
           )}
-          <Button label="Torna indietro" variant="ghost" onPress={() => router.back()} />
+          <Button label={t('common.back')} variant="ghost" onPress={() => router.back()} />
         </View>
       }
     >
       <View className="pt-2">
         <Text className="text-muted text-xs uppercase tracking-widest">
-          Partita a {targetScore} punti
+          {t('match.target', { punti: targetScore })}
         </Text>
       </View>
 
@@ -266,20 +280,20 @@ export default function MatchScreen() {
       {finished && winnerName ? (
         <View className="rounded-card bg-felt p-4">
           <Text className="text-center font-semibold text-base text-white">
-            Ha vinto {winnerName}
+            {t('match.winner', { nome: winnerName })}
           </Text>
         </View>
       ) : null}
 
       {state.handScores.length === 0 ? (
         <Card>
-          <Text className="text-center text-muted text-sm">
-            Nessuna mano registrata. Aggiungi la prima quando avete finito di contare.
-          </Text>
+          <Text className="text-center text-muted text-sm">{t('match.noHands')}</Text>
         </Card>
       ) : (
         <View className="gap-2">
-          <Text className="text-muted text-xs uppercase tracking-widest">Mani giocate</Text>
+          <Text className="text-muted text-xs uppercase tracking-widest">
+            {t('match.handsPlayed')}
+          </Text>
           {state.handScores.map((score, index) => (
             <HandRow
               // biome-ignore lint/suspicious/noArrayIndexKey: le mani sono una sequenza ordinata senza identità propria, e la riga non ha stato interno da preservare

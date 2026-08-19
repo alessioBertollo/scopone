@@ -6,6 +6,7 @@ import { CARDS_PER_SUIT, DECK_SIZE } from '../src/domain/cards'
 import { type HandInput, MAX_SCOPE_PER_HAND, scoreHand, validateHand } from '../src/domain/hand'
 import type { BestBySuit, PrimieraInput } from '../src/domain/primiera'
 import type { ByTeam, TeamId } from '../src/domain/teams'
+import { useTranslation } from '../src/i18n/useTranslation'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
@@ -20,6 +21,7 @@ const EMPTY_BEST: ByTeam<BestBySuit> = { A: {}, B: {} }
 
 export default function HandScreen() {
   const router = useRouter()
+  const { t } = useTranslation()
   const params = useLocalSearchParams<{ index?: string }>()
 
   const match = useMatchStore((state) => state.match)
@@ -100,7 +102,7 @@ export default function HandScreen() {
   ]
 
   const optionalTeamOptions = [
-    { value: 'none' as const, label: 'Nessuno', tone: 'neutral' as const },
+    { value: 'none' as const, label: t('hand.nobody'), tone: 'neutral' as const },
     ...teamOptions,
   ]
 
@@ -127,13 +129,15 @@ export default function HandScreen() {
               <Text className="text-danger text-xs">{issues[0]?.message}</Text>
               {issues.length > 1 ? (
                 <Text className="mt-0.5 text-danger/70 text-xs">
-                  e altri {issues.length - 1} problemi da sistemare
+                  {issues.length === 2
+                    ? t('hand.oneMoreIssue')
+                    : t('hand.manyMoreIssues', { numero: issues.length - 1 })}
                 </Text>
               ) : null}
             </View>
           ) : preview ? (
             <View className="flex-row items-center justify-between rounded-xl bg-sunken px-3 py-2">
-              <Text className="text-muted text-xs">Punti di questa mano</Text>
+              <Text className="text-muted text-xs">{t('hand.points')}</Text>
               <Text>
                 <Text className="font-semibold text-team-a">{preview.totals.A}</Text>
                 <Text className="text-muted"> — </Text>
@@ -143,14 +147,14 @@ export default function HandScreen() {
           ) : null}
 
           <Button
-            label={editIndex !== null ? 'Salva modifiche' : 'Aggiungi mano'}
+            label={editIndex !== null ? t('hand.save') : t('hand.add')}
             testID="salva-mano"
             onPress={save}
             disabled={issues.length > 0}
           />
           {editIndex !== null ? (
             <Button
-              label="Elimina mano"
+              label={t('hand.delete')}
               variant="danger"
               testID="elimina-mano"
               onPress={destroy}
@@ -161,7 +165,7 @@ export default function HandScreen() {
     >
       <View className="flex-row items-center justify-between pt-2">
         <Text className="font-bold text-2xl text-ink">
-          {editIndex !== null ? `Mano ${editIndex + 1}` : 'Nuova mano'}
+          {editIndex !== null ? t('hand.title', { numero: editIndex + 1 }) : t('hand.newTitle')}
         </Text>
         <Pressable
           testID="annulla-mano"
@@ -169,11 +173,11 @@ export default function HandScreen() {
           onPress={() => router.back()}
           className="px-2 py-1 active:opacity-60"
         >
-          <Text className="text-base text-muted">Annulla</Text>
+          <Text className="text-base text-muted">{t('common.cancel')}</Text>
         </Pressable>
       </View>
 
-      <Card title="Carte prese" subtitle="Le due squadre insieme fanno sempre 40.">
+      <Card title={t('hand.cards')} subtitle={t('hand.cardsHint')}>
         <Stepper
           label={teamNames.A}
           tone="a"
@@ -185,7 +189,7 @@ export default function HandScreen() {
         />
       </Card>
 
-      <Card title="Denari" subtitle="In tutto sono dieci.">
+      <Card title={t('hand.denari')} subtitle={t('hand.denariHint')}>
         <Stepper
           label={teamNames.A}
           tone="a"
@@ -197,7 +201,7 @@ export default function HandScreen() {
         />
       </Card>
 
-      <Card title="Settebello" subtitle="Il 7 di denari è sempre di qualcuno.">
+      <Card title={t('hand.settebello')} subtitle={t('hand.settebelloHint')}>
         <Segmented
           options={teamOptions}
           value={settebello}
@@ -207,12 +211,12 @@ export default function HandScreen() {
       </Card>
 
       {rules.primieraEnabled ? (
-        <Card title="Primiera">
+        <Card title={t('hand.primiera')}>
           {primieraMode === 'manual' ? (
             <Segmented
               options={[
                 { value: 'A' as const, label: teamNames.A, tone: 'a' as const },
-                { value: 'pari' as const, label: 'Pari', tone: 'neutral' as const },
+                { value: 'pari' as const, label: t('hand.tie'), tone: 'neutral' as const },
                 { value: 'B' as const, label: teamNames.B, tone: 'b' as const },
               ]}
               value={primieraChoice}
@@ -230,8 +234,8 @@ export default function HandScreen() {
       ) : null}
 
       <Card
-        title="Scope"
-        subtitle={`In una mano se ne possono fare al massimo ${MAX_SCOPE_PER_HAND} in tutto.`}
+        title={t('hand.scope')}
+        subtitle={t('hand.scopeHint', { massimo: MAX_SCOPE_PER_HAND })}
       >
         <Stepper
           label={teamNames.A}
@@ -252,7 +256,7 @@ export default function HandScreen() {
       </Card>
 
       {rules.napolaEnabled ? (
-        <Card title="Napola" subtitle="Asso, 2, 3 di denari e a seguire.">
+        <Card title={t('hand.napola')} subtitle={t('hand.napolaHint')}>
           <View className="gap-3">
             <Segmented
               options={optionalTeamOptions}
@@ -261,7 +265,7 @@ export default function HandScreen() {
             />
             {napolaTeam !== 'none' ? (
               <Stepper
-                label="Carte in sequenza"
+                label={t('hand.napolaLength')}
                 value={napolaLength}
                 onChange={setNapolaLength}
                 min={3}
@@ -273,7 +277,7 @@ export default function HandScreen() {
       ) : null}
 
       {rules.donnaEnabled ? (
-        <Card title="Donna di denari" subtitle="Come il settebello, è sempre di qualcuno.">
+        <Card title={t('hand.donna')} subtitle={t('hand.donnaHint')}>
           <Segmented
             options={teamOptions}
             value={donnaTeam}

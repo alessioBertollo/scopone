@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native'
+import { useTranslation } from '../i18n/useTranslation'
 import { cn } from './cn'
 
 type StepperProps = {
@@ -61,6 +62,8 @@ export function Stepper({
   tone = 'neutral',
   testID,
 }: StepperProps) {
+  const { t } = useTranslation()
+
   return (
     <View className="flex-row items-center justify-between py-1">
       <View className="flex-1 pr-3">
@@ -72,7 +75,7 @@ export function Stepper({
         <StepButton
           symbol="−"
           testID={testID ? `${testID}-meno` : undefined}
-          label={`Diminuisci ${label}`}
+          label={t('common.decrease', { etichetta: label })}
           disabled={value <= min}
           onPress={() => onChange(Math.max(min, value - 1))}
         />
@@ -86,7 +89,7 @@ export function Stepper({
         <StepButton
           symbol="+"
           testID={testID ? `${testID}-piu` : undefined}
-          label={`Aumenta ${label}`}
+          label={t('common.increase', { etichetta: label })}
           disabled={value >= max}
           onPress={() => onChange(Math.min(max, value + 1))}
         />
