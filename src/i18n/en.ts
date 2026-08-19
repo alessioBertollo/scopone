@@ -295,4 +295,12 @@ export const en: Record<keyof typeof it, string> = {
   'teams.preoccupati': 'Worried',
   'teams.convinti': 'Certain',
   'teams.dubbiosi': 'Doubtful',
+  'lineup.title': 'Line-up',
+  'lineup.hint': 'Who plays, and with whom. Per-player standings need this.',
+  'lineup.loading': 'Loading players…',
+  'lineup.out': 'Out',
+  'lineup.needBothTeams': 'At least one player per team is needed.',
+  'lineup.you': '{nome} (you)',
+  'lineup.teamNamesFromPlayers':
+    'Team names follow the chosen players. You can change them below.',
 }

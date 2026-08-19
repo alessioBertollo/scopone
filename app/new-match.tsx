@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useState } from 'react'
-import { Pressable, Text, TextInput, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { DEFAULT_RULES, type PrimieraMode, type WinRule } from '../src/domain/rules'
 import { useTranslation } from '../src/i18n/useTranslation'
-import { createRemoteMatch } from '../src/lib/matches'
+import { getLeague, type LeagueMember } from '../src/lib/leagues'
+import { createRemoteMatch, type MatchLineup } from '../src/lib/matches'
 import { useAuthStore } from '../src/store/auth-store'
 import { useLeaguesStore } from '../src/store/leagues-store'
 import { useMatchStore } from '../src/store/match-store'
@@ -20,6 +21,7 @@ const PLACEHOLDER_COLOR = '#8A8580'
 // c'è la traduzione. Una costante di modulo si valuterebbe all'import, e
 // cambiare lingua non la aggiornerebbe più.
 type TargetValue = '11' | '21'
+type TeamSlot = 'A' | 'B' | 'none'
 type YesNo = 'no' | 'si'
 
 function NameField({
@@ -78,6 +80,34 @@ export default function NewMatchScreen() {
   // battitura, il segnaposto ballerebbe sotto le dita dell'utente.
   const [suggested] = useState(suggestTeamNames)
 
+  // Formazione: chi gioca e in che squadra. Solo dentro una lega, perché
+  // fuori non ci sono giocatori registrati da schierare.
+  const [members, setMembers] = useState<LeagueMember[] | null>(null)
+  const [lineup, setLineup] = useState<Record<string, TeamSlot>>({})
+
+  useEffect(() => {
+    if (!leagueId) return
+
+    let annullato = false
+    void getLeague(leagueId)
+      .then(({ members: elenco }) => {
+        if (annullato) return
+        setMembers(elenco)
+        // Chi avvia la partita gioca quasi sempre: parte già schierato, e
+        // se non è vero basta toglierlo.
+        setLineup(me ? { [me.id]: 'A' } : {})
+      })
+      .catch(() => {
+        // Senza elenco si gioca lo stesso, con i nomi liberi: meglio una
+        // partita senza classifica che nessuna partita.
+        if (!annullato) setMembers([])
+      })
+
+    return () => {
+      annullato = true
+    }
+  }, [leagueId, me])
+
   const [nameA, setNameA] = useState('')
   const [nameB, setNameB] = useState('')
   const [target, setTarget] = useState<TargetValue>('21')
@@ -87,7 +117,22 @@ export default function NewMatchScreen() {
   const [napola, setNapola] = useState<YesNo>('no')
   const [donna, setDonna] = useState<YesNo>('no')
 
-  const teams = { A: nameA.trim() || suggested.A, B: nameB.trim() || suggested.B }
+  const schierati = (team: TeamSlot) =>
+    (members ?? []).filter((member) => lineup[member.profileId] === team)
+
+  /** Con i giocatori scelti il nome di squadra diventa superfluo: si deduce. */
+  const nomeDaGiocatori = (team: TeamSlot) => {
+    const nomi = schierati(team).map((member) => member.displayName)
+    return nomi.length > 0 ? nomi.join(' e ') : ''
+  }
+
+  const teams = {
+    A: nameA.trim() || nomeDaGiocatori('A') || suggested.A,
+    B: nameB.trim() || nomeDaGiocatori('B') || suggested.B,
+  }
+
+  const formazioneCompleta =
+    leagueId === null || (schierati('A').length > 0 && schierati('B').length > 0)
   const rules = {
     ...DEFAULT_RULES,
     targetScore: Number(target),
@@ -120,7 +165,9 @@ export default function NewMatchScreen() {
           teamNames: teams,
           // Chi avvia gioca: è il minimo che serve alle classifiche per
           // giocatore. Schierare gli altri arriverà con la formazione vera.
-          lineup: me ? [{ profileId: me.id, team: 'A' as const }] : undefined,
+          lineup: Object.entries(lineup)
+            .filter((voce): voce is [string, 'A' | 'B'] => voce[1] !== 'none')
+            .map(([profileId, team]): MatchLineup => ({ profileId, team })),
         })
         router.replace(`/match?remote=${created.id}`)
       } catch (cause) {
@@ -158,7 +205,7 @@ export default function NewMatchScreen() {
         <Button
           label={busy ? t('newMatch.creating') : t('newMatch.start')}
           onPress={start}
-          disabled={busy}
+          disabled={busy || !formazioneCompleta}
           testID="inizia-partita"
         />
       }
@@ -189,11 +236,52 @@ export default function NewMatchScreen() {
         </View>
       ) : null}
 
+      {leagueId ? (
+        <Card title={t('lineup.title')} subtitle={t('lineup.hint')}>
+          {members === null ? (
+            <ActivityIndicator />
+          ) : (
+            <View className="gap-3">
+              {members.map((member) => (
+                <View key={member.profileId}>
+                  <Text className="mb-1.5 text-ink text-sm" numberOfLines={1}>
+                    {member.profileId === me?.id
+                      ? t('lineup.you', { nome: member.displayName })
+                      : member.displayName}
+                  </Text>
+                  <Segmented
+                    testID={`formazione-${member.profileId}`}
+                    options={[
+                      { value: 'A' as const, label: teams.A, tone: 'a' as const },
+                      {
+                        value: 'none' as const,
+                        label: t('lineup.out'),
+                        tone: 'neutral' as const,
+                      },
+                      { value: 'B' as const, label: teams.B, tone: 'b' as const },
+                    ]}
+                    value={lineup[member.profileId] ?? 'none'}
+                    onChange={(scelta) =>
+                      setLineup((corrente) => ({ ...corrente, [member.profileId]: scelta }))
+                    }
+                  />
+                </View>
+              ))}
+              {!formazioneCompleta ? (
+                <Text className="text-danger text-xs">{t('lineup.needBothTeams')}</Text>
+              ) : (
+                <Text className="text-muted text-xs">{t('lineup.teamNamesFromPlayers')}</Text>
+              )}
+            </View>
+          )}
+        </Card>
+      ) : null}
+
       <Card title={t('newMatch.teams')} subtitle={t('newMatch.teamsHint')}>
         <View className="flex-row gap-3">
           <NameField
             label={t('newMatch.teamA')}
-            placeholder={suggested.A}
+            placeholder={nomeDaGiocatori('A') || suggested.A}
             value={nameA}
             onChange={setNameA}
             tone="a"
@@ -201,7 +289,7 @@ export default function NewMatchScreen() {
           />
           <NameField
             label={t('newMatch.teamB')}
-            placeholder={suggested.B}
+            placeholder={nomeDaGiocatori('B') || suggested.B}
             value={nameB}
             onChange={setNameB}
             tone="b"

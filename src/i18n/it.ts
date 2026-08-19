@@ -295,4 +295,12 @@ export const it = {
   'teams.preoccupati': 'Preoccupati',
   'teams.convinti': 'Convinti',
   'teams.dubbiosi': 'Dubbiosi',
+  'lineup.title': 'Formazione',
+  'lineup.hint': 'Chi gioca, e con chi. Serve alle classifiche per giocatore.',
+  'lineup.loading': 'Carico i partecipanti…',
+  'lineup.out': 'Fuori',
+  'lineup.needBothTeams': 'Serve almeno un giocatore per squadra.',
+  'lineup.you': '{nome} (tu)',
+  'lineup.teamNamesFromPlayers':
+    'I nomi delle squadre seguono i giocatori scelti. Puoi cambiarli sotto.',
 } satisfies Record<string, string>
