@@ -6,7 +6,10 @@ tags:
 - launchApp:
     clearState: true
 
-- assertVisible: 'Scopone'
+# Niente asserzioni sul testo: lingua e mazzo li sceglie l'utente, e i
+# titoli cambiano di conseguenza. Gli identificatori no.
+- assertVisible:
+    id: 'nuova-partita'
 # A installazione pulita non c'è nulla da riprendere.
 - assertNotVisible:
     id: 'riprendi-partita'
@@ -32,7 +35,9 @@ tags:
 - tapOn:
     id: 'inizia-partita'
 
-- assertVisible: 'Nessuna mano registrata'
+# Tabellone vuoto: nessuna riga di mano.
+- assertNotVisible:
+    id: 'mano-0'
 - assertVisible:
     id: 'totale-A'
     text: '0'

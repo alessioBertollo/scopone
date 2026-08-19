@@ -12,7 +12,8 @@ tags:
 - tapOn:
     id: 'aggiungi-mano'
 
-- assertVisible: 'Nuova mano'
+- assertVisible:
+    id: 'salva-mano'
 
 # 22 carte e 6 denari a Noi, settebello a Noi, primiera a Loro.
 - tapOn:
@@ -35,7 +36,10 @@ tags:
     id: 'primiera-B'
 
 # Carte, denari e settebello a Noi fanno 3; la primiera vale 1 a Loro.
-- assertVisible: 'Punti di questa mano'
+# Il pulsante è attivo solo quando la mano è aritmeticamente valida.
+- assertVisible:
+    id: 'salva-mano'
+    enabled: true
 - tapOn:
     id: 'salva-mano'
 

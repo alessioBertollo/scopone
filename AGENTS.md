@@ -1,7 +1,18 @@
 # Scopone — istruzioni per agenti
 
-App mobile gratuita e offline per il conteggio dei punti a scopone e scopa.
-Nessun backend, nessun account, nessuna raccolta di dati.
+App mobile gratuita per il conteggio dei punti a scopone e scopa.
+
+Ha due modi d'uso, e la distinzione regge tutte le scelte di progetto:
+
+- **senza account** si conta una partita al tavolo, senza rete e senza che
+  nulla esca dal telefono. È il caso principale e non deve mai regredire.
+- **con account** si entra in una lega e le partite diventano condivise: chi
+  avvia una partita è l'unico che la modifica, gli altri la seguono dal vivo.
+
+Backend su Supabase (Postgres, auth, realtime, RLS). Le regole di
+autorizzazione stanno **nel database**, non nell'app: la chiave pubblica vive
+dentro l'APK ed è nota a chiunque, quindi un controllo in una schermata è
+pulizia, non sicurezza. Vedi `supabase/README.md`.
 
 ## Expo È CAMBIATO
 
@@ -28,10 +39,16 @@ Aggiungendo un elemento interattivo, dargli un `testID` in kebab-case. I
 componenti composti espongono un prefisso: `Stepper` genera `<id>-meno`,
 `<id>-piu` e `<id>-valore`, `Segmented` genera `<id>-<valore-opzione>`.
 
+**I testID non si traducono mai**: restano in italiano anche quando l'app è in
+inglese. E i flow non devono contenere asserzioni su testo, perché lingua e
+mazzo li sceglie l'utente: si asserisce su identificatori, o sull'assenza di
+un elemento.
+
 ## Architettura
 
-- `app/` — rotte expo-router: `index` (nuova partita), `match` (tabellone),
-  `hand` (inserimento e modifica mano, presentata come modale).
+- `app/` — rotte expo-router: `index` (home con leghe e partite),
+  `new-match`, `match` (tabellone, anche in sola lettura per chi segue),
+  `hand`, `sign-in`, `settings`, `league/new`, `league/[id]`.
 - `src/domain/` — logica pura, zero dipendenze da React o React Native.
   È il cuore del progetto: ogni regola di punteggio vive qui ed è testata.
 - `src/store/` — stato della partita con zustand, persistito su AsyncStorage.
@@ -40,9 +57,15 @@ componenti composti espongono un prefisso: `Stepper` genera `<id>-meno`,
   con un mock in memoria via alias in `vitest.config.mts`); `hooks.ts` tiene
   il collegamento a React, che un renderer lo richiede, ed è escluso dalla
   copertura.
+- `src/lib/` — accesso al backend: `supabase.ts` (client creato solo quando
+  serve), `auth.ts`, `leagues.ts`, `matches.ts`, `deck.ts`.
+- `src/i18n/` — dizionari e traduzione.
 - `src/ui/` — componenti presentazionali riutilizzabili, senza logica di gioco.
 - `src/components/` — componenti che conoscono il dominio.
-- `src/test/` — factory per i test, non codice di produzione.
+- `src/test/` — factory e finti per i test, non codice di produzione. I moduli
+  che non si possono importare in Node (`react-native`, `expo-localization`,
+  AsyncStorage) hanno qui un sostituto, agganciato con un alias in
+  `vitest.config.mts`: non duplicarli nei singoli file di test.
 
 Il dominio deve restare importabile da Node senza toccare React Native:
 è ciò che permette ai test di girare in millisecondi. La UI consuma il
@@ -65,10 +88,43 @@ ritagliata, spezzando la cifra. Verifica sempre il risultato rasterizzando su
 fondo colorato (`rsvg-convert -b "#1B5E3F"`), perché su bianco il difetto è
 invisibile.
 
+## Testi e lingue
+
+Ogni stringa che l'utente legge sta nei dizionari `src/i18n/it.ts` e
+`src/i18n/en.ts`, che devono avere **le stesse chiavi e gli stessi
+segnaposto**: un test lo verifica, quindi una traduzione dimenticata fa
+fallire la build invece di comparire in produzione.
+
+- Dentro React: `const { t } = useTranslation()`, poi `t('ambito.chiave')`
+- Fuori da React, negli strati dati: `tr('ambito.chiave')` da `src/i18n/tr.ts`
+
+I segnaposto si scrivono `{nome}`: mai concatenare stringhe, perché le lingue
+hanno ordini diversi. I plurali si risolvono con chiavi distinte, non con
+logica dentro la traduzione.
+
+L'italiano è la lingua di riferimento: le chiavi nascono lì. Di partenza l'app
+segue la lingua del dispositivo.
+
+## Nomi delle carte
+
+Le chiavi del dominio (`denari`, `coppe`, `spade`, `bastoni`) sono
+identificatori, non testo, e **non cambiano mai**: sono salvate sul telefono e
+sul server, e rinominarle vorrebbe dire riscrivere i dati a ogni cambio di
+impostazione. La traduzione verso ciò che l'utente legge vive in
+`src/lib/deck.ts`, che segue il mazzo scelto.
+
+Il nove è la carta che distingue i due mazzi: cavallo con le carte italiane,
+donna con le francesi. Se serve mostrarne il nome, passare sempre da
+`rankLabelFor`, mai da una costante.
+
 ## Stile
 
 NativeWind con i colori come variabili CSS in `global.css`, mappate nel tema
 Tailwind. Per cambiare la palette si tocca solo `global.css`.
+
+Il tema scelto (`sistema`, `chiaro`, `scuro`) vive in `src/store/settings-store.ts`
+e va riapplicato con `colorScheme.set()` a ogni avvio: NativeWind riparte
+sempre da quello di sistema.
 
 `darkMode` in `tailwind.config.js` deve restare `'class'`: con `'media'`
 (che è anche il default quando il campo manca) il runtime web di NativeWind
@@ -94,7 +150,10 @@ va in errore appena sincronizza lo schema colori.
 - Chi non ha carte di un seme somma zero per quel seme nella primiera.
 - La partita si chiude solo se una squadra raggiunge il traguardo **e**
   non è in parità con l'altra: a pari punti si gioca un'altra mano.
-- Napola e donna sono varianti opzionali, disattivate di default.
+- Napola e donna di denari sono varianti opzionali, disattivate di default.
+- Il punteggio lo calcola **sempre l'app**: il database conserva le mani come
+  jsonb e non le reinterpreta, così le regole restano implementate una volta
+  sola, quella coperta dai test.
 
 ## Peso dell'app
 

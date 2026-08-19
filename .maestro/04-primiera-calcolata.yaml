@@ -12,8 +12,11 @@ name: Calcolo della primiera dalle carte
 
 - tapOn:
     id: 'primiera-modo-cards'
-- assertVisible: 'Denari'
-- assertVisible: 'Bastoni'
+# I chip di due semi diversi: bastano a dire che la griglia è comparsa.
+- assertVisible:
+    id: 'primiera-A-denari-7'
+- assertVisible:
+    id: 'primiera-A-bastoni-7'
 
 # Il 7 vale 21 e il 6 vale 18: la primiera non segue l'ordine delle carte.
 - tapOn:
