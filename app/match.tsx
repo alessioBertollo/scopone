@@ -1,7 +1,10 @@
-import { useRouter } from 'expo-router'
-import { Pressable, Text, View } from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import type { HandScore, PointKind } from '../src/domain/hand'
+import { scoreMatch } from '../src/domain/match'
 import type { ByTeam, TeamId } from '../src/domain/teams'
+import { getRemoteMatch, type RemoteMatch, watchRemoteMatch } from '../src/lib/matches'
 import { useMatchState } from '../src/store/hooks'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
@@ -78,17 +81,23 @@ function HandRow({
 }: {
   index: number
   score: HandScore
-  onPress: () => void
+  /** Assente per chi sta solo seguendo: la riga resta leggibile ma inerte. */
+  onPress?: () => void
 }) {
   const scored = score.awards.filter((award) => award.winner !== null)
+  const modificabile = onPress !== undefined
 
   return (
     <Pressable
       testID={`mano-${index}`}
-      accessibilityRole="button"
-      accessibilityLabel={`Mano ${index + 1}, modifica`}
+      accessibilityRole={modificabile ? 'button' : 'text'}
+      accessibilityLabel={modificabile ? `Mano ${index + 1}, modifica` : `Mano ${index + 1}`}
+      disabled={!modificabile}
       onPress={onPress}
-      className="rounded-2xl border border-line bg-surface p-3 active:opacity-70"
+      className={cn(
+        'rounded-2xl border border-line bg-surface p-3',
+        modificabile && 'active:opacity-70',
+      )}
     >
       <View className="flex-row items-center justify-between">
         <Text className="font-medium text-muted text-xs uppercase tracking-widest">
@@ -124,19 +133,94 @@ function HandRow({
 
 export default function MatchScreen() {
   const router = useRouter()
-  const teamNames: ByTeam<string> = useMatchStore((state) => state.match.teamNames)
-  const targetScore = useMatchStore((state) => state.match.rules.targetScore)
-  const state = useMatchState()
+  const params = useLocalSearchParams<{ remote?: string }>()
+  const remoteId = params.remote ?? null
+
+  const localTeamNames: ByTeam<string> = useMatchStore((state) => state.match.teamNames)
+  const localTarget = useMatchStore((state) => state.match.rules.targetScore)
+  const localState = useMatchState()
+
+  const [remote, setRemote] = useState<RemoteMatch | null>(null)
+  const [remoteError, setRemoteError] = useState<string | null>(null)
+
+  /**
+   * Una partita di lega si segue mentre viene giocata: la sottoscrizione
+   * consegna il tabellone aggiornato senza interrogare il server a intervalli.
+   * Chi non l'ha avviata riceve gli aggiornamenti e non può scrivere, e non
+   * perché nascondiamo i comandi: sono le policy a rifiutare la scrittura.
+   */
+  useEffect(() => {
+    if (!remoteId) return
+
+    let annullato = false
+    void getRemoteMatch(remoteId)
+      .then((caricata) => {
+        if (!annullato) setRemote(caricata)
+      })
+      .catch((cause: unknown) => {
+        if (!annullato) {
+          setRemoteError(cause instanceof Error ? cause.message : 'Partita non raggiungibile.')
+        }
+      })
+
+    const smetti = watchRemoteMatch(remoteId, (aggiornata) => {
+      if (!annullato) setRemote(aggiornata)
+    })
+
+    return () => {
+      annullato = true
+      smetti()
+    }
+  }, [remoteId])
+
+  // Una partita remota con dati illeggibili non deve far sparire la schermata.
+  let remoteState: ReturnType<typeof scoreMatch> | null = null
+  if (remote) {
+    try {
+      remoteState = scoreMatch(remote.match)
+    } catch {
+      remoteState = null
+    }
+  }
+
+  const seguendo = remoteId !== null
+  const state = remoteState ?? localState
+  const teamNames = remote ? remote.match.teamNames : localTeamNames
+  const targetScore = remote ? remote.match.rules.targetScore : localTarget
+  const puoModificare = !seguendo || remote?.canEdit === true
 
   const finished = state.status === 'finished'
   const winnerName = state.winner ? teamNames[state.winner] : null
+
+  if (seguendo && !remote) {
+    return (
+      <Screen>
+        <View className="flex-1 items-center justify-center gap-3">
+          {remoteError ? (
+            <>
+              <Text className="text-center text-danger text-sm">{remoteError}</Text>
+              <Button label="Torna indietro" variant="ghost" onPress={() => router.back()} />
+            </>
+          ) : (
+            <ActivityIndicator />
+          )}
+        </View>
+      </Screen>
+    )
+  }
 
   return (
     <Screen
       scroll
       footer={
         <View className="gap-2">
-          {finished ? (
+          {!puoModificare ? (
+            <View className="rounded-xl bg-sunken px-3 py-3">
+              <Text className="text-center text-muted text-sm">
+                La sta conducendo chi l'ha avviata. Il tabellone si aggiorna da solo.
+              </Text>
+            </View>
+          ) : finished ? (
             <Button
               label="Nuova partita"
               testID="nuova-partita"
@@ -149,11 +233,7 @@ export default function MatchScreen() {
               onPress={() => router.push('/hand')}
             />
           )}
-          <Button
-            label="Torna alle impostazioni"
-            variant="ghost"
-            onPress={() => router.back()}
-          />
+          <Button label="Torna indietro" variant="ghost" onPress={() => router.back()} />
         </View>
       }
     >
@@ -206,7 +286,7 @@ export default function MatchScreen() {
               key={`hand-${index}`}
               index={index}
               score={score}
-              onPress={() => router.push(`/hand?index=${index}`)}
+              onPress={puoModificare ? () => router.push(`/hand?index=${index}`) : undefined}
             />
           ))}
         </View>

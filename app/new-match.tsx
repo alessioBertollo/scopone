@@ -1,8 +1,10 @@
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { DEFAULT_RULES, type PrimieraMode, type WinRule } from '../src/domain/rules'
-import { useMatchState } from '../src/store/hooks'
+import { createRemoteMatch } from '../src/lib/matches'
+import { useAuthStore } from '../src/store/auth-store'
+import { useLeaguesStore } from '../src/store/leagues-store'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
@@ -78,12 +80,15 @@ function NameField({
 
 export default function NewMatchScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams<{ league?: string }>()
+  const leagueId = params.league ?? null
+  const league = useLeaguesStore((state) =>
+    state.leagues.find((candidate) => candidate.id === leagueId),
+  )
+  const me = useAuthStore((state) => state.user)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const startMatch = useMatchStore((state) => state.startMatch)
-  const hasStarted = useMatchStore((state) => state.hasStarted)
-  const savedTeams = useMatchStore((state) => state.match.teamNames)
-  const saved = useMatchState()
-
-  const savedLabel = `${savedTeams.A} ${saved.totals.A} – ${savedTeams.B} ${saved.totals.B}`
 
   // Suggeriti una volta per apertura della schermata: se cambiassero a ogni
   // battitura, il segnaposto ballerebbe sotto le dita dell'utente.
@@ -98,41 +103,60 @@ export default function NewMatchScreen() {
   const [napola, setNapola] = useState<YesNo>('no')
   const [donna, setDonna] = useState<YesNo>('no')
 
+  const teams = { A: nameA.trim() || suggested.A, B: nameB.trim() || suggested.B }
+  const rules = {
+    ...DEFAULT_RULES,
+    targetScore: Number(target),
+    winRule,
+    primieraEnabled: primiera === 'si',
+    primieraMode,
+    napolaEnabled: napola === 'si',
+    donnaEnabled: donna === 'si',
+  }
+
+  /**
+   * Fuori da una lega la partita resta sul telefono e non serve nemmeno la
+   * rete. Dentro una lega nasce sul server, altrimenti gli altri non
+   * potrebbero seguirla: è l'unico caso in cui la creazione può fallire.
+   */
   const start = () => {
-    startMatch(
-      { A: nameA.trim() || suggested.A, B: nameB.trim() || suggested.B },
-      {
-        ...DEFAULT_RULES,
-        targetScore: Number(target),
-        winRule,
-        primieraEnabled: primiera === 'si',
-        primieraMode,
-        napolaEnabled: napola === 'si',
-        donnaEnabled: donna === 'si',
-      },
-    )
-    router.push('/match')
+    if (!leagueId) {
+      startMatch(teams, rules)
+      router.push('/match')
+      return
+    }
+
+    setBusy(true)
+    setError(null)
+    void (async () => {
+      try {
+        const created = await createRemoteMatch({
+          leagueId,
+          rules,
+          teamNames: teams,
+          // Chi avvia gioca: è il minimo che serve alle classifiche per
+          // giocatore. Schierare gli altri arriverà con la formazione vera.
+          lineup: me ? [{ profileId: me.id, team: 'A' as const }] : undefined,
+        })
+        router.replace(`/match?remote=${created.id}`)
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Qualcosa è andato storto.')
+      } finally {
+        setBusy(false)
+      }
+    })()
   }
 
   return (
     <Screen
       scroll
       footer={
-        <View className="gap-2">
-          <Button label="Inizia partita" onPress={start} testID="inizia-partita" />
-          {hasStarted ? (
-            <Button
-              label={
-                saved.status === 'finished'
-                  ? `Rivedi · ${savedLabel}`
-                  : `Riprendi · ${savedLabel}`
-              }
-              variant="ghost"
-              testID="riprendi-partita"
-              onPress={() => router.push('/match')}
-            />
-          ) : null}
-        </View>
+        <Button
+          label={busy ? 'Creazione in corso…' : 'Inizia partita'}
+          onPress={start}
+          disabled={busy}
+          testID="inizia-partita"
+        />
       }
     >
       <View className="flex-row items-center justify-between pt-2">
@@ -146,6 +170,20 @@ export default function NewMatchScreen() {
           <Text className="text-base text-muted">Annulla</Text>
         </Pressable>
       </View>
+
+      {league ? (
+        <View className="rounded-xl bg-felt/10 px-3 py-2">
+          <Text className="text-felt text-sm">
+            Nella lega {league.name}: gli altri membri potranno seguirla mentre giocate.
+          </Text>
+        </View>
+      ) : null}
+
+      {error ? (
+        <View className="rounded-xl bg-danger/10 px-3 py-2">
+          <Text className="text-danger text-sm">{error}</Text>
+        </View>
+      ) : null}
 
       <Card title="Squadre" subtitle="Lascia il nome suggerito o scrivi il tuo.">
         <View className="flex-row gap-3">
