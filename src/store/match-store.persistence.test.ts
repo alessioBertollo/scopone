@@ -87,6 +87,28 @@ describe('rilettura', () => {
     expect(store.getState().match.hands).toHaveLength(0)
   })
 
+  it('scarta il formato precedente invece di rileggerlo a metà', async () => {
+    // Versione 1: lo schema di prima che il rebello diventasse la donna.
+    seedSaved(
+      {
+        hasStarted: true,
+        match: {
+          rules: makeRules(),
+          teamNames: { A: 'Vecchi', B: 'Dati' },
+          hands: [makeHand()],
+        },
+      },
+      1,
+    )
+
+    await store.persist.rehydrate()
+
+    const state = store.getState()
+    expect(state.hasStarted).toBe(false)
+    expect(state.match.hands).toHaveLength(0)
+    expect(state.match.teamNames).toEqual({ A: 'Noi', B: 'Loro' })
+  })
+
   it('scarta una partita salvata che non è più calcolabile', async () => {
     seedSaved({
       hasStarted: true,
