@@ -82,7 +82,7 @@ nascondere, e chi cerca un contapunti senza ads è esattamente il tuo pubblico.
 | Tag | Punteggio, Carte, Utilità |
 | Sito web | https://alessiobertollo.github.io/scopone/ |
 | Privacy policy | https://alessiobertollo.github.io/scopone/privacy.html |
-| Email di contatto | **DA DECIDERE — vedi nota** |
+| Email di contatto | contapunti.scopa@gmail.com |
 | Contiene annunci | No |
 | Acquisti in-app | No |
 

@@ -36,10 +36,7 @@ Serviti da GitHub Pages sulla cartella `docs/`, entrambi già attivi:
 ## Cosa manca ancora
 
 - [x] GitHub Pages attivato sulla cartella `docs/`
-- [ ] **Email di contatto pubblica dedicata** — non quella di lavoro. Finché
-      non c'è, la privacy policy pubblicata mostra il segnaposto
-      `EMAIL_DA_INSERIRE`: va sostituito prima di mandare l'URL in revisione,
-      perché i revisori la aprono davvero
-- [ ] Icona dell'app: ora è ancora quella di default di Expo
+- [x] Email di contatto pubblica dedicata: `contapunti.scopa@gmail.com`
+- [x] Icona dell'app: il settebello, rigenerabile con `npm run icons`
 - [ ] Feature graphic 1024×500
 - [ ] Almeno due screenshot da telefono reale

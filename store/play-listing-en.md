@@ -74,7 +74,7 @@ github.com/alessioBertollo/scopone
 | Category | Tools |
 | Website | https://alessiobertollo.github.io/scopone/ |
 | Privacy policy | https://alessiobertollo.github.io/scopone/privacy.html |
-| Contact email | Same address used for the Italian listing |
+| Contact email | contapunti.scopa@gmail.com |
 | Contains ads | No |
 | In-app purchases | No |
 
