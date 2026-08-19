@@ -303,4 +303,12 @@ export const en: Record<keyof typeof it, string> = {
   'lineup.you': '{nome} (you)',
   'lineup.teamNamesFromPlayers':
     'Team names follow the chosen players. You can change them below.',
+  'standings.title': 'Standings',
+  'standings.byPlayer': 'Players',
+  'standings.byPair': 'Teams',
+  'standings.played': 'P',
+  'standings.won': 'W',
+  'standings.diff': 'Diff.',
+  'standings.empty': 'No finished match with a line-up yet: standings start from there.',
+  'standings.legend': 'P matches played, W won, Diff. points scored minus conceded.',
 }

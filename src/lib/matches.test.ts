@@ -89,7 +89,8 @@ vi.mock('react-native', () => ({
   AppState: { currentState: 'active', addEventListener: () => ({ remove: () => {} }) },
 }))
 
-const { createRemoteMatch, listLeagueMatches, saveHands, summarise } = await import('./matches')
+const { createRemoteMatch, listLeagueMatches, saveHands, summarise, toStandingsMatches } =
+  await import('./matches')
 
 const RULES = makeRules()
 
@@ -197,6 +198,7 @@ describe('summarise', () => {
       canEdit: true,
       status: 'ongoing' as const,
       updatedAt: '2026-08-18T20:00:00Z',
+      lineup: [],
       match: {
         rules: RULES,
         teamNames: { A: 'Allegri', B: 'Musoni' },
@@ -210,5 +212,97 @@ describe('summarise', () => {
       finished: false,
       winnerName: null,
     })
+  })
+})
+
+describe('toStandingsMatches', () => {
+  const base = {
+    id: 'partita-1',
+    leagueId: 'lega-1',
+    createdBy: 'io',
+    canEdit: true,
+    updatedAt: '2026-08-18T20:00:00Z',
+  }
+
+  const formazione = [
+    { profileId: 'ada', team: 'A' as const },
+    { profileId: 'bruno', team: 'B' as const },
+  ]
+
+  /** Una mano che chiude la partita: settebello più venti scope ad A. */
+  const conclusa = [makeHand({ scope: { A: 18, B: 0 } }), makeHand({ scope: { A: 3, B: 0 } })]
+
+  it('tiene le partite concluse con una formazione', () => {
+    const risultato = toStandingsMatches([
+      {
+        ...base,
+        status: 'ongoing',
+        lineup: formazione,
+        match: { rules: RULES, teamNames: { A: 'A', B: 'B' }, hands: conclusa },
+      },
+    ])
+
+    expect(risultato).toHaveLength(1)
+    expect(risultato[0]?.winner).toBe('A')
+    expect(risultato[0]?.lineup).toEqual(formazione)
+  })
+
+  it('scarta le partite ancora in corso', () => {
+    const risultato = toStandingsMatches([
+      {
+        ...base,
+        status: 'ongoing',
+        lineup: formazione,
+        match: { rules: RULES, teamNames: { A: 'A', B: 'B' }, hands: [makeHand()] },
+      },
+    ])
+    expect(risultato).toEqual([])
+  })
+
+  it('scarta le partite abbandonate', () => {
+    const risultato = toStandingsMatches([
+      {
+        ...base,
+        status: 'abandoned',
+        lineup: formazione,
+        match: { rules: RULES, teamNames: { A: 'A', B: 'B' }, hands: conclusa },
+      },
+    ])
+    expect(risultato).toEqual([])
+  })
+
+  it('scarta le partite senza formazione, che non direbbero chi ha giocato', () => {
+    const risultato = toStandingsMatches([
+      {
+        ...base,
+        status: 'ongoing',
+        lineup: [],
+        match: { rules: RULES, teamNames: { A: 'A', B: 'B' }, hands: conclusa },
+      },
+    ])
+    expect(risultato).toEqual([])
+  })
+
+  it('scarta in silenzio una partita illeggibile senza perdere le altre', () => {
+    const rotta = {
+      ...base,
+      id: 'rotta',
+      status: 'ongoing' as const,
+      lineup: formazione,
+      // Mani prive dei campi obbligatori: scoreMatch non le sa calcolare.
+      match: {
+        rules: RULES,
+        teamNames: { A: 'A', B: 'B' },
+        hands: [{ cards: { A: 99, B: 99 } }] as never,
+      },
+    }
+    const buona = {
+      ...base,
+      status: 'ongoing' as const,
+      lineup: formazione,
+      match: { rules: RULES, teamNames: { A: 'A', B: 'B' }, hands: conclusa },
+    }
+
+    expect(toStandingsMatches([rotta, buona])).toHaveLength(1)
   })
 })

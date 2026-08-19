@@ -303,4 +303,13 @@ export const it = {
   'lineup.you': '{nome} (tu)',
   'lineup.teamNamesFromPlayers':
     'I nomi delle squadre seguono i giocatori scelti. Puoi cambiarli sotto.',
+  'standings.title': 'Classifica',
+  'standings.byPlayer': 'Giocatori',
+  'standings.byPair': 'Coppie',
+  'standings.played': 'G',
+  'standings.won': 'V',
+  'standings.diff': 'Diff.',
+  'standings.empty':
+    'Ancora nessuna partita conclusa con una formazione: la classifica compare da lì.',
+  'standings.legend': 'G partite giocate, V vinte, Diff. differenza fra punti fatti e subiti.',
 } satisfies Record<string, string>

@@ -1,9 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
+import { Standings } from '../../src/components/Standings'
 import { useTranslation } from '../../src/i18n/useTranslation'
 import { getLeague, type League, type LeagueMember } from '../../src/lib/leagues'
-import { listLeagueMatches, type RemoteMatch, summarise } from '../../src/lib/matches'
+import {
+  listLeagueMatches,
+  type RemoteMatch,
+  summarise,
+  toStandingsMatches,
+} from '../../src/lib/matches'
 import { useLeaguesStore } from '../../src/store/leagues-store'
 import { Button } from '../../src/ui/Button'
 import { Card } from '../../src/ui/Card'
@@ -182,6 +188,11 @@ export default function LeagueScreen() {
   }
 
   const { league, members } = dettaglio
+
+  // Il nome per esteso lo conosce solo l'elenco dei partecipanti: la
+  // classifica lavora sugli id, che da soli non direbbero niente a nessuno.
+  const nomeDi = (profileId: string) =>
+    members.find((membro) => membro.profileId === profileId)?.displayName ?? '?'
   const proprietario = league.role === 'owner'
 
   return (
@@ -260,6 +271,11 @@ export default function LeagueScreen() {
             </View>
           ))}
         </View>
+      </Card>
+
+      <SectionTitle>{t('standings.title')}</SectionTitle>
+      <Card>
+        <Standings matches={toStandingsMatches(matches)} nameOf={nomeDi} />
       </Card>
 
       <SectionTitle>{t('league.matches')}</SectionTitle>

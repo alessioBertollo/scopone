@@ -2,6 +2,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { HandInput } from '../domain/hand'
 import { type Match, scoreMatch } from '../domain/match'
 import type { RuleSet } from '../domain/rules'
+import type { StandingsMatch } from '../domain/standings'
 import type { ByTeam, TeamId } from '../domain/teams'
 import { tr } from '../i18n/tr'
 import type { MatchRow, MatchStatus } from './database.types'
@@ -18,6 +19,8 @@ export type RemoteMatch = {
   updatedAt: string
   /** La partita nel formato del dominio: il punteggio lo calcola l'app. */
   match: Match
+  /** Chi ha giocato e in che squadra. Vuoto nelle partite libere. */
+  lineup: MatchLineup[]
 }
 
 export type MatchLineup = { profileId: string; team: TeamId }
@@ -54,7 +57,12 @@ function translate(error: { code?: string; message?: string } | null, fallback: 
   return new Error(fallback)
 }
 
+type RowWithPlayers = MatchRow & {
+  match_players?: { profile_id: string; team: TeamId }[] | null
+}
+
 function toRemoteMatch(row: MatchRow, viewerId: string | null): RemoteMatch {
+  const players = (row as RowWithPlayers).match_players ?? []
   return {
     id: row.id,
     leagueId: row.league_id,
@@ -63,6 +71,7 @@ function toRemoteMatch(row: MatchRow, viewerId: string | null): RemoteMatch {
     status: row.status,
     updatedAt: row.updated_at,
     match: { rules: row.rules, teamNames: row.team_names, hands: row.hands },
+    lineup: players.map((player) => ({ profileId: player.profile_id, team: player.team })),
   }
 }
 
@@ -246,4 +255,28 @@ export function summarise(remote: RemoteMatch): {
     finished: state.status === 'finished',
     winnerName: state.winner ? remote.match.teamNames[state.winner] : null,
   }
+}
+
+/**
+ * Riduce le partite a ciò che serve alla classifica, scartando quelle che non
+ * possono contribuire: ancora in corso, abbandonate, senza formazione, o con
+ * mani che questa versione non sa interpretare.
+ *
+ * Lo scarto è silenzioso di proposito: una partita illeggibile non deve
+ * impedire di vedere la classifica di tutte le altre.
+ */
+export function toStandingsMatches(matches: RemoteMatch[]): StandingsMatch[] {
+  const risultato: StandingsMatch[] = []
+
+  for (const remote of matches) {
+    if (remote.status === 'abandoned' || remote.lineup.length === 0) continue
+
+    try {
+      const state = scoreMatch(remote.match)
+      if (state.winner === null) continue
+      risultato.push({ totals: state.totals, winner: state.winner, lineup: remote.lineup })
+    } catch {}
+  }
+
+  return risultato
 }
