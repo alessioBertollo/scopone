@@ -13,7 +13,7 @@ import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
 import { cn } from '../src/ui/cn'
 import { Screen } from '../src/ui/Screen'
-import { Confetti, celebrationSeed, VictoryBanner } from '../src/ui/Victory'
+import { Confetti, celebrationSeed, VictoryBanner, WinningNumber } from '../src/ui/Victory'
 
 // Chiavi e non testo: la mappa si valuta all'import, la traduzione avviene a
 // ogni render, così cambiare lingua ridisegna anche i gettoni dei punti.
@@ -42,6 +42,18 @@ function TeamTotal({
 }) {
   const { t } = useTranslation()
 
+  const numero = (
+    <Text
+      testID={`totale-${team}`}
+      className={cn(
+        'mt-1 font-bold text-6xl tabular-nums',
+        team === 'A' ? 'text-team-a' : 'text-team-b',
+      )}
+    >
+      {total}
+    </Text>
+  )
+
   return (
     <View className="flex-1 items-center">
       <Text
@@ -53,15 +65,7 @@ function TeamTotal({
       >
         {name}
       </Text>
-      <Text
-        testID={`totale-${team}`}
-        className={cn(
-          'mt-1 font-bold text-6xl tabular-nums',
-          team === 'A' ? 'text-team-a' : 'text-team-b',
-        )}
-      >
-        {total}
-      </Text>
+      {isWinner ? <WinningNumber>{numero}</WinningNumber> : numero}
       <Text className="mt-1 text-muted text-xs">
         {isWinner
           ? t('match.won')

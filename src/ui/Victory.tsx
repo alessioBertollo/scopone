@@ -123,6 +123,32 @@ export function Confetti({ team, seed }: { team: TeamId; seed: number }) {
 }
 
 /**
+ * Un ingrandimento singolo per il numero della squadra che ha vinto. Parte
+ * poco dopo la fascia invece che insieme: tre cose che si muovono allo stesso
+ * istante si leggono come un sobbalzo, in fila si leggono come un gesto.
+ */
+export function WinningNumber({ children }: { children: ReactNode }) {
+  const reduceMotion = useReduceMotion()
+  const scale = useSharedValue(1)
+
+  useEffect(() => {
+    if (reduceMotion) return
+
+    scale.value = withDelay(
+      160,
+      withSequence(
+        withSpring(1.18, { damping: 6, stiffness: 180 }),
+        withSpring(1, { damping: 12, stiffness: 140 }),
+      ),
+    )
+  }, [reduceMotion, scale])
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }))
+
+  return <Animated.View style={style}>{children}</Animated.View>
+}
+
+/**
  * La fascia del vincitore entra con un rimbalzo. È l'unico momento dell'app
  * in cui vale la pena farsi notare: tutto il resto è un contapunti, e un
  * contapunti che si muove troppo dà fastidio.
