@@ -1,4 +1,3 @@
-import type { RealtimeChannel } from '@supabase/supabase-js'
 import type { HandInput } from '../domain/hand'
 import { type Match, scoreMatch } from '../domain/match'
 import type { RuleSet } from '../domain/rules'
@@ -40,8 +39,14 @@ const MESSAGES = {
   signInRequired: () => tr('matches.signInRequired'),
 } as const
 
+/**
+ * `match_players` è un innesto e non una colonna: senza di esso ogni partita
+ * torna con la formazione vuota, e `toStandingsMatches` le scarta tutte in
+ * silenzio. Le classifiche resterebbero vuote senza un errore da nessuna
+ * parte, ed è il motivo per cui va chiesto a ogni lettura.
+ */
 const COLUMNS =
-  'id, league_id, created_by, rules, team_names, hands, status, created_at, updated_at'
+  'id, league_id, created_by, rules, team_names, hands, status, created_at, updated_at, match_players(profile_id, team)'
 
 /**
  * Il rifiuto di una policy arriva come 42501 o come zero righe aggiornate.
@@ -220,25 +225,34 @@ export function watchRemoteMatch(
   onChange: (match: RemoteMatch) => void,
 ): () => void {
   const supabase = getSupabase()
-  let channel: RealtimeChannel | null = null
   let stopped = false
 
-  void viewerId().then((me) => {
-    if (stopped) return
-
-    channel = supabase
-      .channel(`match:${matchId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
-        (payload) => onChange(toRemoteMatch(payload.new as MatchRow, me)),
-      )
-      .subscribe()
-  })
+  /**
+   * La notifica di Postgres porta soltanto le colonne di `matches`: la
+   * formazione vive in un'altra tabella e nel payload non c'è. Costruire la
+   * partita da lì consegnerebbe uno schieramento vuoto a ogni aggiornamento.
+   * Perciò la notifica fa solo da sveglia, e la partita si rilegge intera.
+   */
+  const channel = supabase
+    .channel(`match:${matchId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+      () => {
+        void getRemoteMatch(matchId)
+          .then((aggiornata) => {
+            if (!stopped) onChange(aggiornata)
+          })
+          // Un giro a vuoto non deve rompere la schermata di chi guarda: la
+          // prossima notifica riporta comunque lo stato corrente.
+          .catch(() => {})
+      },
+    )
+    .subscribe()
 
   return () => {
     stopped = true
-    if (channel) void supabase.removeChannel(channel)
+    void supabase.removeChannel(channel)
   }
 }
 

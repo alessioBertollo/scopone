@@ -19,6 +19,8 @@ const backend = vi.hoisted(() => {
     error: null as unknown,
     /** Righe passate a insert, per verificare cosa scriviamo davvero. */
     inserted: [] as { table: string; values: unknown }[],
+    /** Colonne chieste a select, per verificare cosa leggiamo davvero. */
+    selected: [] as string[],
     updated: [] as unknown[],
   }
 
@@ -28,12 +30,16 @@ const backend = vi.hoisted(() => {
     state.rows = []
     state.error = null
     state.inserted = []
+    state.selected = []
     state.updated = []
   }
 
   function table(name: string) {
     const builder = {
-      select: () => builder,
+      select: (columns?: string) => {
+        if (typeof columns === 'string') state.selected.push(columns)
+        return builder
+      },
       eq: () => builder,
       order: () => builder,
       limit: async (): Promise<Reply> => ({
@@ -89,8 +95,14 @@ vi.mock('react-native', () => ({
   AppState: { currentState: 'active', addEventListener: () => ({ remove: () => {} }) },
 }))
 
-const { createRemoteMatch, listLeagueMatches, saveHands, summarise, toStandingsMatches } =
-  await import('./matches')
+const {
+  createRemoteMatch,
+  getRemoteMatch,
+  listLeagueMatches,
+  saveHands,
+  summarise,
+  toStandingsMatches,
+} = await import('./matches')
 
 const RULES = makeRules()
 
@@ -175,6 +187,38 @@ describe('permessi', () => {
   it('riconosce l assenza di rete', async () => {
     backend.state.error = { message: 'Failed to fetch' }
     await expect(listLeagueMatches('lega-1')).rejects.toThrow(/connessione/i)
+  })
+})
+
+describe('formazione', () => {
+  it('rilegge la formazione insieme alla partita', async () => {
+    backend.state.row = row({
+      match_players: [
+        { profile_id: 'io', team: 'A' },
+        { profile_id: 'tu', team: 'B' },
+      ],
+    })
+
+    const partita = await getRemoteMatch('partita-1')
+
+    expect(partita.lineup).toEqual([
+      { profileId: 'io', team: 'A' },
+      { profileId: 'tu', team: 'B' },
+    ])
+  })
+
+  it('chiede la formazione a ogni lettura, o le classifiche restano vuote in silenzio', async () => {
+    backend.state.row = row()
+    backend.state.rows = [row()]
+
+    await getRemoteMatch('partita-1')
+    await saveHands('partita-1', [])
+    await listLeagueMatches('lega-1')
+
+    expect(backend.state.selected.length).toBeGreaterThan(2)
+    for (const columns of backend.state.selected) {
+      expect(columns).toContain('match_players')
+    }
   })
 })
 
