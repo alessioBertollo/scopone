@@ -21,6 +21,8 @@ const backend = vi.hoisted(() => {
     inserted: [] as { table: string; values: unknown }[],
     /** Colonne chieste a select, per verificare cosa leggiamo davvero. */
     selected: [] as string[],
+    /** Coppie passate a neq, per verificare cosa teniamo fuori. */
+    excluded: [] as [string, string][],
     updated: [] as unknown[],
   }
 
@@ -31,6 +33,7 @@ const backend = vi.hoisted(() => {
     state.error = null
     state.inserted = []
     state.selected = []
+    state.excluded = []
     state.updated = []
   }
 
@@ -41,6 +44,10 @@ const backend = vi.hoisted(() => {
         return builder
       },
       eq: () => builder,
+      neq: (column: string, value: string) => {
+        state.excluded.push([column, value])
+        return builder
+      },
       order: () => builder,
       limit: async (): Promise<Reply> => ({
         data: state.error ? null : state.rows,
@@ -99,12 +106,18 @@ const {
   createRemoteMatch,
   getRemoteMatch,
   listLeagueMatches,
+  listMyMatches,
   saveHands,
   summarise,
   toStandingsMatches,
+  trySummarise,
 } = await import('./matches')
 
 const RULES = makeRules()
+
+function match(hands: ReturnType<typeof makeHand>[] = []) {
+  return { rules: RULES, teamNames: { A: 'Allegri', B: 'Musoni' }, hands }
+}
 
 function row(overrides: Record<string, unknown> = {}) {
   return {
@@ -168,11 +181,11 @@ describe('createRemoteMatch', () => {
 describe('permessi', () => {
   it('marca modificabile solo la partita di chi guarda', async () => {
     backend.state.row = row({ created_by: 'io' })
-    const mia = await saveHands('partita-1', [])
+    const mia = await saveHands('partita-1', match())
     expect(mia.canEdit).toBe(true)
 
     backend.state.row = row({ created_by: 'qualcun-altro' })
-    const altrui = await saveHands('partita-1', [])
+    const altrui = await saveHands('partita-1', match())
     expect(altrui.canEdit).toBe(false)
   })
 
@@ -181,7 +194,9 @@ describe('permessi', () => {
       code: '42501',
       message: 'new row violates row-level security policy',
     }
-    await expect(saveHands('partita-1', [])).rejects.toThrow(/Solo chi ha avviato la partita/)
+    await expect(saveHands('partita-1', match())).rejects.toThrow(
+      /Solo chi ha avviato la partita/,
+    )
   })
 
   it('riconosce l assenza di rete', async () => {
@@ -212,7 +227,7 @@ describe('formazione', () => {
     backend.state.rows = [row()]
 
     await getRemoteMatch('partita-1')
-    await saveHands('partita-1', [])
+    await saveHands('partita-1', match())
     await listLeagueMatches('lega-1')
 
     expect(backend.state.selected.length).toBeGreaterThan(2)
@@ -227,9 +242,54 @@ describe('saveHands', () => {
     backend.state.row = row()
     const hands = [makeHand(), makeHand({ scope: { A: 2, B: 0 } })]
 
-    await saveHands('partita-1', hands)
+    await saveHands('partita-1', match(hands))
 
-    expect(backend.state.updated).toEqual([{ hands }])
+    expect(backend.state.updated).toEqual([{ hands, status: 'ongoing' }])
+  })
+
+  it('dichiara conclusa la partita che ha raggiunto l obiettivo', async () => {
+    backend.state.row = row()
+    // Ogni mano di prova vale un punto: tante mani quanto l'obiettivo.
+    const hands = Array.from({ length: RULES.targetScore }, () => makeHand())
+
+    await saveHands('partita-1', match(hands))
+
+    expect(backend.state.updated).toEqual([{ hands, status: 'finished' }])
+  })
+
+  it('lascia aperta una partita con mani che non sa interpretare', async () => {
+    backend.state.row = row()
+    const rotte = [{ cards: { A: 99, B: 99 } }] as unknown as ReturnType<typeof makeHand>[]
+
+    await saveHands('partita-1', match(rotte))
+
+    expect(backend.state.updated).toEqual([{ hands: rotte, status: 'ongoing' }])
+  })
+})
+
+describe('elenchi', () => {
+  it('tiene fuori le partite abbandonate, che non sono un risultato', async () => {
+    backend.state.rows = [row()]
+
+    await listMyMatches()
+
+    expect(backend.state.excluded).toEqual([['status', 'abandoned']])
+  })
+})
+
+describe('trySummarise', () => {
+  it('riassume una partita leggibile', async () => {
+    backend.state.row = row({ hands: [makeHand()] })
+    const partita = await getRemoteMatch('partita-1')
+
+    expect(trySummarise(partita)?.score).toContain('Allegri 1')
+  })
+
+  it('torna null invece di far cadere la schermata che la elencava', async () => {
+    backend.state.row = row({ hands: [{ cards: { A: 99, B: 99 } }] })
+    const partita = await getRemoteMatch('partita-1')
+
+    expect(trySummarise(partita)).toBeNull()
   })
 })
 

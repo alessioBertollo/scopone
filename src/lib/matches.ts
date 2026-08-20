@@ -1,4 +1,3 @@
-import type { HandInput } from '../domain/hand'
 import { type Match, scoreMatch } from '../domain/match'
 import type { RuleSet } from '../domain/rules'
 import type { StandingsMatch } from '../domain/standings'
@@ -132,13 +131,29 @@ export async function createRemoteMatch(input: {
  * scrittura concorrente da fondere, e una sostituzione secca non lascia mai
  * lo stato a metà.
  */
-export async function saveHands(matchId: string, hands: HandInput[]): Promise<RemoteMatch> {
+/**
+ * Lo stato viaggia con le mani, nella stessa istruzione: derivarlo qui invece
+ * di affidarlo a una chiamata separata rende impossibile che i due dati si
+ * contraddicano, e dà al server un campo su cui filtrare senza dover leggere
+ * tutte le mani di tutte le partite.
+ */
+function derivedStatus(match: Match): MatchStatus {
+  try {
+    return scoreMatch(match).status === 'finished' ? 'finished' : 'ongoing'
+  } catch {
+    // Mani che questa versione non sa interpretare: meglio lasciarla aperta
+    // che dichiararla conclusa sulla base di un calcolo fallito.
+    return 'ongoing'
+  }
+}
+
+export async function saveHands(matchId: string, match: Match): Promise<RemoteMatch> {
   const supabase = getSupabase()
   const me = await viewerId()
 
   const { data, error } = await supabase
     .from('matches')
-    .update({ hands })
+    .update({ hands: match.hands, status: derivedStatus(match) })
     .eq('id', matchId)
     .select(COLUMNS)
     .single()
@@ -198,13 +213,16 @@ export async function listLeagueMatches(leagueId: string, limit = 20): Promise<R
  * Partite che riguardano chi guarda: quelle avviate da lui e quelle delle
  * sue leghe. Le policy fanno già il filtro, qui si ordina e si tronca.
  */
-export async function listMyMatches(limit = 20): Promise<RemoteMatch[]> {
+export async function listMyMatches(limit = 30): Promise<RemoteMatch[]> {
   const supabase = getSupabase()
   const me = await viewerId()
 
   const { data, error } = await supabase
     .from('matches')
     .select(COLUMNS)
+    // Una partita abbandonata non è né da concludere né un risultato: non
+    // appartiene a nessuna delle due sezioni della home.
+    .neq('status', 'abandoned')
     .order('updated_at', { ascending: false })
     .limit(limit)
 
@@ -268,6 +286,18 @@ export function summarise(remote: RemoteMatch): {
     score: `${A} ${state.totals.A} – ${B} ${state.totals.B}`,
     finished: state.status === 'finished',
     winnerName: state.winner ? remote.match.teamNames[state.winner] : null,
+  }
+}
+
+/**
+ * Come `summarise`, ma una partita che questa versione non sa interpretare
+ * torna `null` invece di far cadere la schermata che la stava elencando.
+ */
+export function trySummarise(remote: RemoteMatch): ReturnType<typeof summarise> | null {
+  try {
+    return summarise(remote)
+  } catch {
+    return null
   }
 }
 

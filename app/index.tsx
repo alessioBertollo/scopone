@@ -1,8 +1,8 @@
 import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useTranslation } from '../src/i18n/useTranslation'
-import { listMyMatches, type RemoteMatch, summarise } from '../src/lib/matches'
+import { listMyMatches, type RemoteMatch, trySummarise } from '../src/lib/matches'
 import { isBackendConfigured } from '../src/lib/supabase'
 import { useAuthStore } from '../src/store/auth-store'
 import { useMatchState } from '../src/store/hooks'
@@ -96,6 +96,53 @@ export default function HomeScreen() {
       void reload()
     }, [refreshLeagues, reload]),
   )
+
+  /**
+   * La divisione si fa sulle mani e non sullo stato memorizzato: lo stato è
+   * una comodità per il server, ma le partite create prima che venisse
+   * scritto sono tutte marcate «in corso», e finirebbero tutte in cima.
+   *
+   * Le proprie stanno davanti perché sono le uniche che chi guarda può
+   * davvero concludere. L'ordinamento per data che arriva dal server
+   * sopravvive dentro i due gruppi, perché `sort` in JavaScript è stabile.
+   */
+  const { daConcludere, concluse } = useMemo(() => {
+    const aperte: RemoteMatch[] = []
+    const chiuse: RemoteMatch[] = []
+
+    for (const match of remote) {
+      const riepilogo = trySummarise(match)
+      if (!riepilogo) continue
+      if (riepilogo.finished) chiuse.push(match)
+      else aperte.push(match)
+    }
+
+    aperte.sort((a, b) => Number(b.canEdit) - Number(a.canEdit))
+    return { daConcludere: aperte, concluse: chiuse }
+  }, [remote])
+
+  const righe = (matches: RemoteMatch[]) =>
+    matches.map((match) => {
+      const riepilogo = trySummarise(match)
+      if (!riepilogo) return null
+
+      return (
+        <RowCard
+          key={match.id}
+          testID={`partita-${match.id}`}
+          title={riepilogo.score}
+          accent={!riepilogo.finished && match.canEdit}
+          detail={
+            riepilogo.finished
+              ? t('home.winner', { nome: riepilogo.winnerName ?? t('home.nobody') })
+              : match.canEdit
+                ? t('home.ongoingYours')
+                : t('home.ongoingWatching')
+          }
+          onPress={() => router.push(`/match?remote=${match.id}`)}
+        />
+      )
+    })
 
   const inCorso = hasStarted && local.status === 'ongoing'
   const punteggioLocale = `${teamNames.A} ${local.totals.A} – ${teamNames.B} ${local.totals.B}`
@@ -202,34 +249,20 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {daConcludere.length > 0 ? (
+        <>
+          <SectionTitle>{t('home.toFinish')}</SectionTitle>
+          <View className="gap-2">{righe(daConcludere)}</View>
+        </>
+      ) : null}
+
       <SectionTitle>{t('home.recent')}</SectionTitle>
       {loadingRemote ? (
         <Card>
           <ActivityIndicator />
         </Card>
-      ) : remote.length > 0 ? (
-        <View className="gap-2">
-          {remote.map((match) => {
-            const riepilogo = summarise(match)
-            return (
-              <RowCard
-                key={match.id}
-                testID={`partita-${match.id}`}
-                title={riepilogo.score}
-                detail={
-                  riepilogo.finished
-                    ? t('home.winner', {
-                        nome: riepilogo.winnerName ?? t('home.nobody'),
-                      })
-                    : match.canEdit
-                      ? t('home.ongoingYours')
-                      : t('home.ongoingWatching')
-                }
-                onPress={() => router.push(`/match?remote=${match.id}`)}
-              />
-            )
-          })}
-        </View>
+      ) : concluse.length > 0 ? (
+        <View className="gap-2">{righe(concluse)}</View>
       ) : (
         <Card>
           <Text className="text-muted text-sm">

@@ -349,7 +349,7 @@ export default function HandScreen() {
     if (!remoteId) return
     setBusy(true)
     setError(null)
-    saveHands(remoteId, prossima.hands)
+    saveHands(remoteId, prossima)
       .then(() => router.back())
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : t('common.error'))
