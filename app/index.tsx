@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useFocusEffect, useRouter } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useTranslation } from '../src/i18n/useTranslation'
 import { listMyMatches, type RemoteMatch, summarise } from '../src/lib/matches'
@@ -84,10 +84,18 @@ export default function HomeScreen() {
     }
   }, [signedIn])
 
-  useEffect(() => {
-    void refreshLeagues()
-    void reload()
-  }, [refreshLeagues, reload])
+  /**
+   * La home si rilegge ogni volta che torna in primo piano. Caricarla al solo
+   * cambio di accesso la lasciava ferma ai dati del login: si tornava da una
+   * partita appena conclusa e l'elenco mostrava ancora zero a zero, e una
+   * lega appena creata non compariva.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      void refreshLeagues()
+      void reload()
+    }, [refreshLeagues, reload]),
+  )
 
   const inCorso = hasStarted && local.status === 'ongoing'
   const punteggioLocale = `${teamNames.A} ${local.totals.A} – ${teamNames.B} ${local.totals.B}`

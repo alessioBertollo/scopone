@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
 import { Standings } from '../../src/components/Standings'
 import { useTranslation } from '../../src/i18n/useTranslation'
@@ -107,9 +107,13 @@ export default function LeagueScreen() {
     }
   }, [id, t])
 
-  useEffect(() => {
-    void carica()
-  }, [carica])
+  // Stessa ragione della home: tornando da una partita, partite e classifiche
+  // devono riflettere quello che è appena successo.
+  useFocusEffect(
+    useCallback(() => {
+      void carica()
+    }, [carica]),
+  )
 
   const agisci = async (action: () => Promise<void>) => {
     setBusy(true)
