@@ -32,6 +32,11 @@
       }
     }
   },
+  "html": {
+    "parser": {
+      "interpolation": true
+    }
+  },
   "javascript": {
     "formatter": {
       "quoteStyle": "single",
