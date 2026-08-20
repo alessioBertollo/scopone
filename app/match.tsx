@@ -13,6 +13,7 @@ import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
 import { cn } from '../src/ui/cn'
 import { Screen } from '../src/ui/Screen'
+import { Confetti, celebrationSeed, VictoryBanner } from '../src/ui/Victory'
 
 // Chiavi e non testo: la mappa si valuta all'import, la traduzione avviene a
 // ogni render, così cambiare lingua ridisegna anche i gettoni dei punti.
@@ -250,6 +251,14 @@ export default function MatchScreen() {
   return (
     <Screen
       scroll
+      overlay={
+        finished && state.winner && winnerName ? (
+          <Confetti
+            team={state.winner}
+            seed={celebrationSeed(state.handScores.length, winnerName)}
+          />
+        ) : null
+      }
       footer={
         <View className="gap-2">
           {!puoModificare ? (
@@ -300,11 +309,11 @@ export default function MatchScreen() {
       </Card>
 
       {finished && winnerName ? (
-        <View className="rounded-card bg-felt p-4">
+        <VictoryBanner>
           <Text className="text-center font-semibold text-base text-white">
             {t('match.winner', { nome: winnerName })}
           </Text>
-        </View>
+        </VictoryBanner>
       ) : null}
 
       {state.handScores.length === 0 ? (

@@ -9,9 +9,15 @@ type ScreenProps = {
   scroll?: boolean
   /** Contenuto ancorato in fondo, fuori dallo scroll. */
   footer?: ReactNode
+  /**
+   * Contenuto sovrapposto a tutta la schermata e inerte al tocco. Sta fuori
+   * dallo scroll di proposito: dentro scorrerebbe col contenuto, e dei
+   * coriandoli che scorrono con la lista non cadono, traslocano.
+   */
+  overlay?: ReactNode
 }
 
-export function Screen({ children, scroll = false, footer }: ScreenProps) {
+export function Screen({ children, scroll = false, footer, overlay }: ScreenProps) {
   const padding = 'px-5'
 
   return (
@@ -31,6 +37,12 @@ export function Screen({ children, scroll = false, footer }: ScreenProps) {
       {footer ? (
         <View className={cn('border-line border-t bg-surface pt-3 pb-2', padding)}>
           {footer}
+        </View>
+      ) : null}
+
+      {overlay ? (
+        <View pointerEvents="none" className="absolute inset-0">
+          {overlay}
         </View>
       ) : null}
     </SafeAreaView>
