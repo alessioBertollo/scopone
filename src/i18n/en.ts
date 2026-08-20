@@ -100,6 +100,7 @@ export const en: Record<keyof typeof it, string> = {
   'signIn.emailHint': 'A six-digit code arrives by email. We set no passwords.',
   'signIn.codeTitle': 'The code you received',
   'signIn.sentTo': 'Sent to {email}',
+  'signIn.spamNote': 'No email? Check your spam folder — it sometimes ends up there.',
 
   'newMatch.title': 'New match',
   'newMatch.creating': 'Creating…',

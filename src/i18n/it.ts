@@ -96,6 +96,7 @@ export const it = {
   'signIn.emailHint': 'Ti arriva un codice di sei cifre. Non impostiamo password.',
   'signIn.codeTitle': 'Il codice ricevuto',
   'signIn.sentTo': 'Inviato a {email}',
+  'signIn.spamNote': 'Non è arrivata? Controlla la posta indesiderata: a volte finisce lì.',
 
   'newMatch.title': 'Nuova partita',
   'newMatch.creating': 'Creazione in corso…',

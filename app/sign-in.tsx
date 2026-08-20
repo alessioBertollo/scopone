@@ -153,6 +153,7 @@ export default function SignInScreen() {
             className="rounded-xl bg-sunken px-4 py-3 text-center text-2xl text-ink tracking-[8px]"
           />
           {busy ? <ActivityIndicator className="mt-3" /> : null}
+          <Text className="mt-3 text-muted text-xs">{t('signIn.spamNote')}</Text>
         </Card>
       )}
     </Screen>
