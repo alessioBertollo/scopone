@@ -158,6 +158,7 @@ export const en: Record<keyof typeof it, string> = {
 
   'hand.title': 'Hand {numero}',
   'hand.newTitle': 'New hand',
+  'hand.saving': 'Saving…',
   'hand.save': 'Save changes',
   'hand.add': 'Add hand',
   'hand.delete': 'Delete hand',

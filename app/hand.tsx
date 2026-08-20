@@ -1,12 +1,19 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useMemo, useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { PrimieraCardsInput } from '../src/components/PrimieraCardsInput'
 import { CARDS_PER_SUIT, DECK_SIZE } from '../src/domain/cards'
 import { type HandInput, MAX_SCOPE_PER_HAND, scoreHand, validateHand } from '../src/domain/hand'
+import {
+  addHand as appendTo,
+  removeHand as dropFrom,
+  type Match,
+  replaceHand as replaceIn,
+} from '../src/domain/match'
 import type { BestBySuit, PrimieraInput } from '../src/domain/primiera'
 import type { ByTeam, TeamId } from '../src/domain/teams'
 import { useTranslation } from '../src/i18n/useTranslation'
+import { getRemoteMatch, saveHands } from '../src/lib/matches'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
@@ -19,20 +26,32 @@ type OptionalTeam = TeamId | 'none'
 
 const EMPTY_BEST: ByTeam<BestBySuit> = { A: {}, B: {} }
 
-export default function HandScreen() {
+/**
+ * Il modulo riceve la partita già caricata invece di leggerla da sé: i valori
+ * iniziali dei campi si calcolano una volta sola al montaggio, e con una
+ * partita che arriva dalla rete dopo il primo render mostrerebbero i valori
+ * di una mano vuota al posto di quella da correggere.
+ */
+function HandForm({
+  match,
+  editIndex,
+  busy,
+  error,
+  onSave,
+  onDelete,
+}: {
+  match: Match
+  editIndex: number | null
+  busy: boolean
+  error: string | null
+  onSave: (hand: HandInput) => void
+  onDelete: () => void
+}) {
   const router = useRouter()
   const { t } = useTranslation()
-  const params = useLocalSearchParams<{ index?: string }>()
-
-  const match = useMatchStore((state) => state.match)
-  const addHand = useMatchStore((state) => state.addHand)
-  const replaceHand = useMatchStore((state) => state.replaceHand)
-  const removeHand = useMatchStore((state) => state.removeHand)
 
   const rules = match.rules
   const teamNames = match.teamNames
-
-  const editIndex = params.index !== undefined ? Number(params.index) : null
   const existing = editIndex !== null ? match.hands[editIndex] : undefined
 
   const [cardsA, setCardsA] = useState(() => existing?.cards.A ?? 20)
@@ -106,25 +125,16 @@ export default function HandScreen() {
     ...teamOptions,
   ]
 
-  const save = () => {
-    if (issues.length > 0) return
-    if (editIndex !== null) replaceHand(editIndex, hand)
-    else addHand(hand)
-    router.back()
-  }
-
-  const destroy = () => {
-    if (editIndex === null) return
-    removeHand(editIndex)
-    router.back()
-  }
-
   return (
     <Screen
       scroll
       footer={
         <View className="gap-2">
-          {issues.length > 0 ? (
+          {error ? (
+            <View className="rounded-xl bg-danger/10 px-3 py-2">
+              <Text className="text-danger text-xs">{error}</Text>
+            </View>
+          ) : issues.length > 0 ? (
             <View className="rounded-xl bg-danger/10 px-3 py-2">
               <Text className="text-danger text-xs">{issues[0]?.message}</Text>
               {issues.length > 1 ? (
@@ -147,17 +157,20 @@ export default function HandScreen() {
           ) : null}
 
           <Button
-            label={editIndex !== null ? t('hand.save') : t('hand.add')}
+            label={
+              busy ? t('hand.saving') : editIndex !== null ? t('hand.save') : t('hand.add')
+            }
             testID="salva-mano"
-            onPress={save}
-            disabled={issues.length > 0}
+            onPress={() => onSave(hand)}
+            disabled={busy || issues.length > 0}
           />
           {editIndex !== null ? (
             <Button
               label={t('hand.delete')}
               variant="danger"
               testID="elimina-mano"
-              onPress={destroy}
+              disabled={busy}
+              onPress={onDelete}
             />
           ) : null}
         </View>
@@ -170,6 +183,7 @@ export default function HandScreen() {
         <Pressable
           testID="annulla-mano"
           accessibilityRole="button"
+          disabled={busy}
           onPress={() => router.back()}
           className="px-2 py-1 active:opacity-60"
         >
@@ -287,5 +301,120 @@ export default function HandScreen() {
         </Card>
       ) : null}
     </Screen>
+  )
+}
+
+/**
+ * La stessa schermata serve due partite diverse. Quella locale sta nel
+ * negozio e si modifica sul posto; quella di lega sta sul server, e va letta
+ * prima e riscritta dopo — il rifiuto di chi non l'ha avviata arriva dalle
+ * policy, non da un controllo qui.
+ */
+export default function HandScreen() {
+  const router = useRouter()
+  const { t } = useTranslation()
+  const params = useLocalSearchParams<{ index?: string; remote?: string }>()
+  const remoteId = params.remote ?? null
+  const editIndex = params.index !== undefined ? Number(params.index) : null
+
+  const localMatch = useMatchStore((state) => state.match)
+  const addHand = useMatchStore((state) => state.addHand)
+  const replaceHand = useMatchStore((state) => state.replaceHand)
+  const removeHand = useMatchStore((state) => state.removeHand)
+
+  const [remoteMatch, setRemoteMatch] = useState<Match | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!remoteId) return
+
+    let annullato = false
+    void getRemoteMatch(remoteId)
+      .then((caricata) => {
+        if (!annullato) setRemoteMatch(caricata.match)
+      })
+      .catch((cause: unknown) => {
+        if (!annullato) setError(cause instanceof Error ? cause.message : t('common.error'))
+      })
+
+    return () => {
+      annullato = true
+    }
+  }, [remoteId, t])
+
+  // Le mani si ricalcolano dalla partita intera con le stesse funzioni del
+  // negozio locale: il server riceve l'elenco completo, non una differenza.
+  const invia = (prossima: Match) => {
+    if (!remoteId) return
+    setBusy(true)
+    setError(null)
+    saveHands(remoteId, prossima.hands)
+      .then(() => router.back())
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : t('common.error'))
+        setBusy(false)
+      })
+  }
+
+  if (remoteId) {
+    if (!remoteMatch) {
+      return (
+        <Screen>
+          <View className="flex-1 items-center justify-center gap-3">
+            {error ? (
+              <>
+                <Text className="text-center text-danger text-sm">{error}</Text>
+                <Button
+                  label={t('common.back')}
+                  variant="ghost"
+                  onPress={() => router.back()}
+                />
+              </>
+            ) : (
+              <ActivityIndicator />
+            )}
+          </View>
+        </Screen>
+      )
+    }
+
+    return (
+      <HandForm
+        match={remoteMatch}
+        editIndex={editIndex}
+        busy={busy}
+        error={error}
+        onSave={(hand) =>
+          invia(
+            editIndex !== null
+              ? replaceIn(remoteMatch, editIndex, hand)
+              : appendTo(remoteMatch, hand),
+          )
+        }
+        onDelete={() => {
+          if (editIndex !== null) invia(dropFrom(remoteMatch, editIndex))
+        }}
+      />
+    )
+  }
+
+  return (
+    <HandForm
+      match={localMatch}
+      editIndex={editIndex}
+      busy={false}
+      error={null}
+      onSave={(hand) => {
+        if (editIndex !== null) replaceHand(editIndex, hand)
+        else addHand(hand)
+        router.back()
+      }}
+      onDelete={() => {
+        if (editIndex === null) return
+        removeHand(editIndex)
+        router.back()
+      }}
+    />
   )
 }

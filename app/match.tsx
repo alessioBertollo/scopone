@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import type { HandScore, PointKind } from '../src/domain/hand'
 import { scoreMatch } from '../src/domain/match'
@@ -169,16 +169,6 @@ export default function MatchScreen() {
     if (!remoteId) return
 
     let annullato = false
-    void getRemoteMatch(remoteId)
-      .then((caricata) => {
-        if (!annullato) setRemote(caricata)
-      })
-      .catch((cause: unknown) => {
-        if (!annullato) {
-          setRemoteError(cause instanceof Error ? cause.message : t('match.unreachable'))
-        }
-      })
-
     const smetti = watchRemoteMatch(remoteId, (aggiornata) => {
       if (!annullato) setRemote(aggiornata)
     })
@@ -187,7 +177,34 @@ export default function MatchScreen() {
       annullato = true
       smetti()
     }
-  }, [remoteId, t])
+  }, [remoteId])
+
+  /**
+   * Il tempo reale è un miglioramento, non una garanzia: una notifica persa
+   * lascerebbe il tabellone indietro senza che nessuno se ne accorga.
+   * Rileggere ogni volta che la schermata torna in primo piano copre sia
+   * quel caso sia il proprio salvataggio appena fatto.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!remoteId) return
+
+      let annullato = false
+      void getRemoteMatch(remoteId)
+        .then((caricata) => {
+          if (!annullato) setRemote(caricata)
+        })
+        .catch((cause: unknown) => {
+          if (!annullato) {
+            setRemoteError(cause instanceof Error ? cause.message : t('match.unreachable'))
+          }
+        })
+
+      return () => {
+        annullato = true
+      }
+    }, [remoteId, t]),
+  )
 
   // Una partita remota con dati illeggibili non deve far sparire la schermata.
   let remoteState: ReturnType<typeof scoreMatch> | null = null
@@ -204,6 +221,11 @@ export default function MatchScreen() {
   const teamNames = remote ? remote.match.teamNames : localTeamNames
   const targetScore = remote ? remote.match.rules.targetScore : localTarget
   const puoModificare = !seguendo || remote?.canEdit === true
+
+  // Il tipo esplicito tiene il letterale: il ternario da solo si allarga a
+  // `string`, e le rotte tipizzate non lo accettano.
+  const apriMano = (index: number): `/hand?${string}` =>
+    remoteId ? `/hand?remote=${remoteId}&index=${index}` : `/hand?index=${index}`
 
   const finished = state.status === 'finished'
   const winnerName = state.winner ? teamNames[state.winner] : null
@@ -244,7 +266,7 @@ export default function MatchScreen() {
             <Button
               label={t('match.addHand')}
               testID="aggiungi-mano"
-              onPress={() => router.push('/hand')}
+              onPress={() => router.push(remoteId ? `/hand?remote=${remoteId}` : '/hand')}
             />
           )}
           <Button label={t('common.back')} variant="ghost" onPress={() => router.back()} />
@@ -300,7 +322,7 @@ export default function MatchScreen() {
               key={`hand-${index}`}
               index={index}
               score={score}
-              onPress={puoModificare ? () => router.push(`/hand?index=${index}`) : undefined}
+              onPress={puoModificare ? () => router.push(apriMano(index)) : undefined}
             />
           ))}
         </View>

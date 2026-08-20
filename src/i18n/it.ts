@@ -154,6 +154,7 @@ export const it = {
 
   'hand.title': 'Mano {numero}',
   'hand.newTitle': 'Nuova mano',
+  'hand.saving': 'Salvataggio…',
   'hand.save': 'Salva modifiche',
   'hand.add': 'Aggiungi mano',
   'hand.delete': 'Elimina mano',
