@@ -1,14 +1,18 @@
 <!--
-  Template per Authentication → Email Templates → Magic Link.
+  Template per Authentication → Emails → Magic Link.
 
-  Tre cose lo distinguono da quello predefinito:
-  - contiene {{ .Token }}, cioè il codice a sei cifre che l'app chiede
-    davvero. Il template di serie manda solo un collegamento, che qui non
-    serve a niente.
+  Quattro cose lo distinguono da quello predefinito:
+  - contiene {{ .Token }}, cioè il codice che l'app chiede davvero. Il
+    template di serie manda solo un collegamento, che qui non serve a niente.
   - dice chi scrive e perché. Un'email anonima che chiede di cliccare è
     indistinguibile da una truffa, e chi la riceve fa bene a diffidare.
   - non contiene collegamenti. Non servendoci, toglierli elimina anche il
     motivo principale per cui i filtri antispam si insospettiscono.
+  - è bilingue. GoTrue renderizza un solo template per progetto e non sa in
+    che lingua è impostata l'app: la scelta fatta sul telefono non arriva
+    fin qui. Le due lingue nello stesso messaggio sono il modo di non
+    mandare un'email in italiano a chi usa l'app in inglese, e viceversa.
+    Il codice sta in mezzo una volta sola: le cifre non hanno lingua.
 -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
        style="background:#f5f1e8;padding:32px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
@@ -17,13 +21,8 @@
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
              style="max-width:480px;background:#fffefa;border:1px solid #e0d8c6;border-radius:16px;padding:32px">
         <tr>
-          <td style="font-size:22px;font-weight:700;color:#1b5e3f;padding-bottom:4px">
+          <td style="font-size:22px;font-weight:700;color:#1b5e3f;padding-bottom:20px">
             Scopone
-          </td>
-        </tr>
-        <tr>
-          <td style="font-size:15px;line-height:1.6;color:#1c1917;padding-bottom:24px">
-            Ecco il codice per entrare. Vale pochi minuti.
           </td>
         </tr>
         <tr>
@@ -34,21 +33,33 @@
           </td>
         </tr>
         <tr>
-          <td style="font-size:14px;line-height:1.6;color:#78716c;padding-bottom:8px">
-            Scrivilo nell'app per accedere alle tue leghe.
+          <td style="font-size:15px;line-height:1.6;color:#1c1917;padding-bottom:6px">
+            Ecco il codice per entrare.
           </td>
         </tr>
         <tr>
-          <td style="font-size:14px;line-height:1.6;color:#78716c">
+          <td style="font-size:14px;line-height:1.6;color:#78716c;padding-bottom:20px">
+            Scrivilo nell'app per accedere alle tue leghe. Vale pochi minuti.
             Se non hai chiesto tu di accedere, ignora questo messaggio: senza
             il codice non succede nulla.
           </td>
         </tr>
         <tr>
+          <td style="padding-top:20px;border-top:1px solid #e0d8c6;font-size:15px;line-height:1.6;color:#1c1917;padding-bottom:6px">
+            Here is your sign-in code.
+          </td>
+        </tr>
+        <tr>
+          <td style="font-size:14px;line-height:1.6;color:#78716c">
+            Type it in the app to reach your leagues. It expires in a few
+            minutes. If you did not ask to sign in, ignore this message:
+            nothing happens without the code.
+          </td>
+        </tr>
+        <tr>
           <td style="padding-top:24px;border-top:1px solid #e0d8c6;font-size:12px;line-height:1.6;color:#a8a29e">
             Scopone — contapunti per scopone e scopa.<br />
-            Here is your sign-in code. Type it in the app; it expires in a few
-            minutes. If you did not request it, ignore this message.
+            Score counter for scopone and scopa.
           </td>
         </tr>
       </table>
