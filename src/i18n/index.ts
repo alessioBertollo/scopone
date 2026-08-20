@@ -27,8 +27,16 @@ export const LANGUAGE_LABEL: Record<Language, string> = {
  * comunque meglio dell'inglese approssimativo di una traduzione automatica.
  */
 export function deviceLanguage(): Language {
-  const preferred = getLocales()[0]?.languageCode
-  return preferred === 'en' ? 'en' : 'it'
+  try {
+    const preferred = getLocales()[0]?.languageCode
+    return preferred === 'en' ? 'en' : 'it'
+  } catch {
+    // `expo-localization` è un modulo nativo: in una build che non lo
+    // contiene, leggerlo solleva un'eccezione. Succede a chi apre l'app con
+    // un dev client vecchio, ma anche a chi installa una build malriuscita.
+    // La lingua è un dettaglio: non deve impedire l'avvio dell'app.
+    return 'it'
+  }
 }
 
 /**

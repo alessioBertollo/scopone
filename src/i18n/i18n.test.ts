@@ -1,4 +1,4 @@
-import { describe, expect, it as test } from 'vitest'
+import { describe, expect, it as test, vi } from 'vitest'
 import { en } from './en'
 import { translate } from './index'
 import { it } from './it'
@@ -34,5 +34,23 @@ describe('translate', () => {
   test('restituisce il testo grezzo quando non ci sono valori', () => {
     expect(translate('it', 'settings.title')).toBe('Impostazioni')
     expect(translate('en', 'settings.title')).toBe('Settings')
+  })
+})
+
+describe('deviceLanguage', () => {
+  test('non lancia se il modulo nativo manca', async () => {
+    vi.resetModules()
+    vi.doMock('expo-localization', () => ({
+      getLocales: () => {
+        throw new Error('Native module not found')
+      },
+    }))
+
+    const { deviceLanguage } = await import('./index')
+    // L'italiano è il ripiego: lo scopone si gioca soprattutto qui.
+    expect(deviceLanguage()).toBe('it')
+
+    vi.doUnmock('expo-localization')
+    vi.resetModules()
   })
 })
