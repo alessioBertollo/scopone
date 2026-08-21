@@ -46,8 +46,10 @@ un elemento.
 
 ## Architettura
 
-- `app/` — rotte expo-router: `index` e `friends` sono le due schede di primo
-  livello (barra fissa in basso, montata da `_layout.tsx` solo su queste due),
+- `app/` — rotte expo-router: `index`, `friends` e `standings` sono le tre
+  schede di primo livello (barra fissa in basso, montata da `_layout.tsx`
+  solo su queste tre; `standings` mostra una lega alla volta, mai i
+  giocatori di leghe diverse mescolati nella stessa tabella),
   `new-match`, `match` (tabellone, anche in sola lettura per chi segue),
   `hand`, `sign-in`, `settings`, `league/new`, `league/[id]`, e
   `join/index` + `join/[code]` per entrare nella formazione di una partita

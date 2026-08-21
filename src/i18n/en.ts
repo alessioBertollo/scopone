@@ -311,6 +311,7 @@ export const en: Record<keyof typeof it, string> = {
 
   'tabs.home': 'Home',
   'tabs.friends': 'Friends',
+  'tabs.standings': 'Standings',
 
   'matches.network': 'No connection. Check your network and try again.',
   'matches.notAllowed': 'Only whoever started the match can change it.',
@@ -383,4 +384,14 @@ export const en: Record<keyof typeof it, string> = {
   'standings.diff': 'Diff.',
   'standings.empty': 'No finished match with a line-up yet: standings start from there.',
   'standings.legend': 'P matches played, W won, Diff. points scored minus conceded.',
+  'standings.noBackend':
+    'This copy of the app is not connected to any server, so standings are unavailable. Matches at the table work just the same.',
+  'standings.needAccount': 'An account is needed',
+  'standings.needAccountBody':
+    'Standings come from a league’s matches. You sign in with a code sent by email, no password.',
+  'standings.wait': 'One moment…',
+  'standings.signIn': 'Sign in',
+  'standings.noLeagues': 'Join a league to see the standings of who plays there.',
+  'standings.loading': 'Loading the standings…',
+  'standings.loadFailed': 'The standings could not be loaded. Try again.',
 }

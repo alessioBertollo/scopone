@@ -308,6 +308,7 @@ export const it = {
 
   'tabs.home': 'Home',
   'tabs.friends': 'Amici',
+  'tabs.standings': 'Classifiche',
 
   'matches.network': 'Nessuna connessione. Controlla la rete e riprova.',
   'matches.notAllowed': 'Solo chi ha avviato la partita può modificarla.',
@@ -384,4 +385,14 @@ export const it = {
   'standings.empty':
     'Ancora nessuna partita conclusa con una formazione: la classifica compare da lì.',
   'standings.legend': 'G partite giocate, V vinte, Diff. differenza fra punti fatti e subiti.',
+  'standings.noBackend':
+    'Questa copia dell’app non è collegata a nessun server, quindi le classifiche non sono disponibili. Le partite al tavolo funzionano lo stesso.',
+  'standings.needAccount': 'Serve un account',
+  'standings.needAccountBody':
+    'La classifica nasce dalle partite di una lega. L’accesso è con un codice via email, senza password.',
+  'standings.wait': 'Un attimo…',
+  'standings.signIn': 'Accedi',
+  'standings.noLeagues': 'Entra in una lega per vedere la classifica di chi ci gioca.',
+  'standings.loading': 'Carico la classifica…',
+  'standings.loadFailed': 'Non è stato possibile caricare la classifica. Riprova.',
 } satisfies Record<string, string>

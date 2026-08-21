@@ -9,11 +9,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/store/auth-store'
 import { useMatchHydrated } from '../src/store/hooks'
 import { useSettingsStore } from '../src/store/settings-store'
-import { TabBar } from '../src/ui/TabBar'
+import { TabBar, type TabRoute } from '../src/ui/TabBar'
 
-/** Le uniche due rotte con la barra sotto: il resto è dettaglio o modulo. */
-function tabAt(pathname: string): '/' | '/friends' | null {
-  if (pathname === '/' || pathname === '/friends') return pathname
+/** Le uniche tre rotte con la barra sotto: il resto è dettaglio o modulo. */
+function tabAt(pathname: string): TabRoute | null {
+  if (pathname === '/' || pathname === '/friends' || pathname === '/standings') return pathname
   return null
 }
 
@@ -43,6 +43,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="friends" />
+            <Stack.Screen name="standings" />
             <Stack.Screen name="join/index" />
             <Stack.Screen name="join/[code]" />
             <Stack.Screen name="new-match" />

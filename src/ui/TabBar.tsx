@@ -5,8 +5,10 @@ import type { TranslationKey } from '../i18n'
 import { useTranslation } from '../i18n/useTranslation'
 import { cn } from './cn'
 
+export type TabRoute = '/' | '/friends' | '/standings'
+
 type Tab = {
-  href: '/' | '/friends'
+  href: TabRoute
   icon: string
   labelKey: TranslationKey
   testID: string
@@ -15,14 +17,15 @@ type Tab = {
 const TABS: Tab[] = [
   { href: '/', icon: '🏠', labelKey: 'tabs.home', testID: 'tab-home' },
   { href: '/friends', icon: '👥', labelKey: 'tabs.friends', testID: 'tab-friends' },
+  { href: '/standings', icon: '🏆', labelKey: 'tabs.standings', testID: 'tab-standings' },
 ]
 
 /**
- * Barra fissa sotto le due schede di primo livello. Sta fuori da `Screen`,
+ * Barra fissa sotto le tre schede di primo livello. Sta fuori da `Screen`,
  * come sorella dello `Stack`, così resta ferma mentre lo stack sopra
  * cambia schermata: comparire e sparire ad ogni tocco sarebbe uno sfarfallio.
  */
-export function TabBar({ active }: { active: '/' | '/friends' }) {
+export function TabBar({ active }: { active: TabRoute }) {
   const router = useRouter()
   const { t } = useTranslation()
 
