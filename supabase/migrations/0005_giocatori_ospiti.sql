@@ -5,12 +5,16 @@
 -- La riga resta dentro match_players così la formazione rimane un solo
 -- elenco, non due letture da fondere in ogni schermata che la mostra.
 
+-- La chiave primaria composita va tolta prima di poter rendere profile_id
+-- nullable: Postgres non ammette una colonna nella chiave primaria che possa
+-- essere null, nemmeno per un istante dentro lo stesso ALTER TABLE.
+alter table public.match_players drop constraint match_players_pkey;
+
 alter table public.match_players
   add column id uuid not null default gen_random_uuid(),
   add column guest_name text,
   alter column profile_id drop not null;
 
-alter table public.match_players drop constraint match_players_pkey;
 alter table public.match_players add primary key (id);
 
 alter table public.match_players
