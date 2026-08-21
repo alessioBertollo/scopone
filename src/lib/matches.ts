@@ -3,7 +3,7 @@ import type { RuleSet } from '../domain/rules'
 import type { StandingsMatch } from '../domain/standings'
 import type { ByTeam, TeamId } from '../domain/teams'
 import { tr } from '../i18n/tr'
-import type { MatchRow, MatchStatus } from './database.types'
+import type { MatchPlayerRow, MatchRow, MatchStatus } from './database.types'
 import { getSupabase } from './supabase'
 
 /** Una partita sul server, con l'indicazione di cosa può farci chi guarda. */
@@ -21,7 +21,14 @@ export type RemoteMatch = {
   lineup: MatchLineup[]
 }
 
-export type MatchLineup = { profileId: string; team: TeamId }
+/**
+ * Un socio della lega o un amico, riconosciuto dal profilo, oppure un ospite
+ * senza account: le classifiche possono attribuire solo il primo caso, ma
+ * per giocare basta un nome.
+ */
+export type MatchLineup =
+  | { kind: 'member'; profileId: string; team: TeamId }
+  | { kind: 'guest'; guestName: string; team: TeamId }
 
 /**
  * Sono funzioni e non stringhe perché l'oggetto viene valutato all'import:
@@ -45,7 +52,8 @@ const MESSAGES = {
  * parte, ed è il motivo per cui va chiesto a ogni lettura.
  */
 const COLUMNS =
-  'id, league_id, created_by, rules, team_names, hands, status, created_at, updated_at, match_players(profile_id, team)'
+  'id, league_id, created_by, rules, team_names, hands, status, created_at, updated_at, ' +
+  'match_players(id, profile_id, guest_name, team)'
 
 /**
  * Il rifiuto di una policy arriva come 42501 o come zero righe aggiornate.
@@ -62,7 +70,13 @@ function translate(error: { code?: string; message?: string } | null, fallback: 
 }
 
 type RowWithPlayers = MatchRow & {
-  match_players?: { profile_id: string; team: TeamId }[] | null
+  match_players?: MatchPlayerRow[] | null
+}
+
+function toLineup(player: MatchPlayerRow): MatchLineup {
+  return player.profile_id
+    ? { kind: 'member', profileId: player.profile_id, team: player.team }
+    : { kind: 'guest', guestName: player.guest_name ?? '', team: player.team }
 }
 
 function toRemoteMatch(row: MatchRow, viewerId: string | null): RemoteMatch {
@@ -75,7 +89,7 @@ function toRemoteMatch(row: MatchRow, viewerId: string | null): RemoteMatch {
     status: row.status,
     updatedAt: row.updated_at,
     match: { rules: row.rules, teamNames: row.team_names, hands: row.hands },
-    lineup: players.map((player) => ({ profileId: player.profile_id, team: player.team })),
+    lineup: players.map(toLineup),
   }
 }
 
@@ -107,7 +121,7 @@ export async function createRemoteMatch(input: {
     .single()
 
   if (error || !data) throw translate(error, MESSAGES.createFailed())
-  const created = toRemoteMatch(data as MatchRow, me)
+  const created = toRemoteMatch(data as unknown as MatchRow, me)
 
   // La formazione è ciò che rende possibili le classifiche per giocatore:
   // senza, sappiamo chi ha vinto ma non chi stava in quale squadra.
@@ -115,7 +129,8 @@ export async function createRemoteMatch(input: {
     const { error: lineupError } = await supabase.from('match_players').insert(
       input.lineup.map((player) => ({
         match_id: created.id,
-        profile_id: player.profileId,
+        profile_id: player.kind === 'member' ? player.profileId : null,
+        guest_name: player.kind === 'guest' ? player.guestName : null,
         team: player.team,
       })),
     )
@@ -159,7 +174,7 @@ export async function saveHands(matchId: string, match: Match): Promise<RemoteMa
     .single()
 
   if (error || !data) throw translate(error, MESSAGES.saveFailed())
-  return toRemoteMatch(data as MatchRow, me)
+  return toRemoteMatch(data as unknown as MatchRow, me)
 }
 
 export async function setMatchStatus(
@@ -177,7 +192,7 @@ export async function setMatchStatus(
     .single()
 
   if (error || !data) throw translate(error, MESSAGES.saveFailed())
-  return toRemoteMatch(data as MatchRow, me)
+  return toRemoteMatch(data as unknown as MatchRow, me)
 }
 
 export async function getRemoteMatch(matchId: string): Promise<RemoteMatch> {
@@ -190,7 +205,7 @@ export async function getRemoteMatch(matchId: string): Promise<RemoteMatch> {
     .eq('id', matchId)
     .single()
   if (error || !data) throw translate(error, MESSAGES.notFound())
-  return toRemoteMatch(data as MatchRow, me)
+  return toRemoteMatch(data as unknown as MatchRow, me)
 }
 
 /** Partite di una lega, dalla più recente. */
@@ -206,7 +221,7 @@ export async function listLeagueMatches(leagueId: string, limit = 20): Promise<R
     .limit(limit)
 
   if (error) throw translate(error, MESSAGES.loadFailed())
-  return (data as MatchRow[]).map((row) => toRemoteMatch(row, me))
+  return (data as unknown as MatchRow[]).map((row) => toRemoteMatch(row, me))
 }
 
 /**
@@ -227,7 +242,7 @@ export async function listMyMatches(limit = 30): Promise<RemoteMatch[]> {
     .limit(limit)
 
   if (error) throw translate(error, MESSAGES.loadFailed())
-  return (data as MatchRow[]).map((row) => toRemoteMatch(row, me))
+  return (data as unknown as MatchRow[]).map((row) => toRemoteMatch(row, me))
 }
 
 /**
@@ -318,7 +333,12 @@ export function toStandingsMatches(matches: RemoteMatch[]): StandingsMatch[] {
     try {
       const state = scoreMatch(remote.match)
       if (state.winner === null) continue
-      risultato.push({ totals: state.totals, winner: state.winner, lineup: remote.lineup })
+      // Un ospite senza account non ha un profilo a cui attribuire la
+      // partita: conta per il punteggio, non per la classifica personale.
+      const lineup = remote.lineup.flatMap((player) =>
+        player.kind === 'member' ? [{ profileId: player.profileId, team: player.team }] : [],
+      )
+      risultato.push({ totals: state.totals, winner: state.winner, lineup })
     } catch {}
   }
 

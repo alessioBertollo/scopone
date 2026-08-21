@@ -145,15 +145,17 @@ describe('createRemoteMatch', () => {
       rules: RULES,
       teamNames: { A: 'Allegri', B: 'Musoni' },
       lineup: [
-        { profileId: 'io', team: 'A' },
-        { profileId: 'tu', team: 'B' },
+        { kind: 'member', profileId: 'io', team: 'A' },
+        { kind: 'member', profileId: 'tu', team: 'B' },
+        { kind: 'guest', guestName: 'Ospite', team: 'B' },
       ],
     })
 
     const formazione = backend.state.inserted.find((i) => i.table === 'match_players')
     expect(formazione?.values).toEqual([
-      { match_id: 'partita-1', profile_id: 'io', team: 'A' },
-      { match_id: 'partita-1', profile_id: 'tu', team: 'B' },
+      { match_id: 'partita-1', profile_id: 'io', guest_name: null, team: 'A' },
+      { match_id: 'partita-1', profile_id: 'tu', guest_name: null, team: 'B' },
+      { match_id: 'partita-1', profile_id: null, guest_name: 'Ospite', team: 'B' },
     ])
   })
 
@@ -217,8 +219,8 @@ describe('formazione', () => {
     const partita = await getRemoteMatch('partita-1')
 
     expect(partita.lineup).toEqual([
-      { profileId: 'io', team: 'A' },
-      { profileId: 'tu', team: 'B' },
+      { kind: 'member', profileId: 'io', team: 'A' },
+      { kind: 'member', profileId: 'tu', team: 'B' },
     ])
   })
 
@@ -329,6 +331,10 @@ describe('toStandingsMatches', () => {
   }
 
   const formazione = [
+    { kind: 'member' as const, profileId: 'ada', team: 'A' as const },
+    { kind: 'member' as const, profileId: 'bruno', team: 'B' as const },
+  ]
+  const formazioneAttesa = [
     { profileId: 'ada', team: 'A' as const },
     { profileId: 'bruno', team: 'B' as const },
   ]
@@ -348,7 +354,23 @@ describe('toStandingsMatches', () => {
 
     expect(risultato).toHaveLength(1)
     expect(risultato[0]?.winner).toBe('A')
-    expect(risultato[0]?.lineup).toEqual(formazione)
+    expect(risultato[0]?.lineup).toEqual(formazioneAttesa)
+  })
+
+  it('scarta gli ospiti dalla classifica personale, restano nel punteggio', () => {
+    const risultato = toStandingsMatches([
+      {
+        ...base,
+        status: 'ongoing',
+        lineup: [
+          ...formazione,
+          { kind: 'guest' as const, guestName: 'Ospite', team: 'B' as const },
+        ],
+        match: { rules: RULES, teamNames: { A: 'A', B: 'B' }, hands: conclusa },
+      },
+    ])
+
+    expect(risultato[0]?.lineup).toEqual(formazioneAttesa)
   })
 
   it('scarta le partite ancora in corso', () => {

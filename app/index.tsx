@@ -179,6 +179,17 @@ export default function HomeScreen() {
         }
       </View>
 
+      {isBackendConfigured ? (
+        <Pressable
+          testID="vai-ingresso-codice"
+          accessibilityRole="button"
+          onPress={() => router.push('/join')}
+          className="active:opacity-60"
+        >
+          <Text className="text-felt text-sm">{t('home.joinByCode')}</Text>
+        </Pressable>
+      ) : null}
+
       {inCorso ? (
         <>
           <SectionTitle>{t('home.pending')}</SectionTitle>

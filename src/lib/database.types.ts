@@ -65,7 +65,10 @@ export type MatchRow = {
 }
 
 export type MatchPlayerRow = {
+  id: string
   match_id: string
-  profile_id: string
+  /** `null` per un ospite senza account: gioca con `guest_name`. Colonna aggiunta dalla migrazione 0005. */
+  profile_id: string | null
+  guest_name: string | null
   team: TeamId
 }

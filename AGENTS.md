@@ -46,9 +46,12 @@ un elemento.
 
 ## Architettura
 
-- `app/` — rotte expo-router: `index` (home con leghe e partite),
+- `app/` — rotte expo-router: `index` e `friends` sono le due schede di primo
+  livello (barra fissa in basso, montata da `_layout.tsx` solo su queste due),
   `new-match`, `match` (tabellone, anche in sola lettura per chi segue),
-  `hand`, `sign-in`, `settings`, `league/new`, `league/[id]`.
+  `hand`, `sign-in`, `settings`, `league/new`, `league/[id]`, e
+  `join/index` + `join/[code]` per entrare nella formazione di una partita
+  di lega da un link o da un codice, senza essere socio né amico.
 - `src/domain/` — logica pura, zero dipendenze da React o React Native.
   È il cuore del progetto: ogni regola di punteggio vive qui ed è testata.
 - `src/store/` — stato della partita con zustand, persistito su AsyncStorage.
@@ -58,7 +61,11 @@ un elemento.
   il collegamento a React, che un renderer lo richiede, ed è escluso dalla
   copertura.
 - `src/lib/` — accesso al backend: `supabase.ts` (client creato solo quando
-  serve), `auth.ts`, `leagues.ts`, `matches.ts`, `deck.ts`.
+  serve), `auth.ts`, `leagues.ts`, `friends.ts`, `matches.ts`, `deck.ts`,
+  `errors.ts` (traduzione degli errori Supabase condivisa fra i moduli),
+  `lobby.ts` (tavolo pre-partita effimero su canale Realtime broadcast,
+  senza righe di database: solo chi ha creato la partita scrive, gli ospiti
+  mandano il nome e restano in ascolto di dove vengono messi).
 - `src/i18n/` — dizionari e traduzione.
 - `src/ui/` — componenti presentazionali riutilizzabili, senza logica di gioco.
 - `src/components/` — componenti che conoscono il dominio.

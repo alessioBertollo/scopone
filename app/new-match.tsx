@@ -1,9 +1,11 @@
+import * as Linking from 'expo-linking'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Pressable, Share, Text, TextInput, View } from 'react-native'
 import { DEFAULT_RULES, type PrimieraMode, type WinRule } from '../src/domain/rules'
 import { useTranslation } from '../src/i18n/useTranslation'
 import { getLeague, type LeagueMember } from '../src/lib/leagues'
+import { generateLobbyCode, hostLobby } from '../src/lib/lobby'
 import { createRemoteMatch, type MatchLineup } from '../src/lib/matches'
 import { useAuthStore } from '../src/store/auth-store'
 import { useFriendsStore } from '../src/store/friends-store'
@@ -135,6 +137,48 @@ export default function NewMatchScreen() {
     return elenco
   }, [members, friends])
 
+  // Tavolo per chi entra da link o codice, senza dover essere socio della
+  // lega né amico: un ospite senza account. Effimero, vive solo mentre
+  // questa schermata è aperta.
+  const [lobbyCode, setLobbyCode] = useState<string | null>(null)
+  const [guests, setGuests] = useState<
+    Record<string, { name: string; profileId: string | null; team: TeamSlot }>
+  >({})
+  const host = useRef<ReturnType<typeof hostLobby> | null>(null)
+
+  useEffect(() => {
+    return () => host.current?.close()
+  }, [])
+
+  const condividiTavolo = () => {
+    if (lobbyCode) return
+    const code = generateLobbyCode()
+    setLobbyCode(code)
+    host.current = hostLobby(code, (request) => {
+      setGuests((corrente) => ({
+        ...corrente,
+        [request.id]: { name: request.name, profileId: request.profileId, team: 'none' },
+      }))
+    })
+  }
+
+  const piazzaOspite = (requestId: string, scelta: TeamSlot) => {
+    setGuests((corrente) => {
+      const attuale = corrente[requestId]
+      if (!attuale) return corrente
+      return { ...corrente, [requestId]: { ...attuale, team: scelta } }
+    })
+    host.current?.place(requestId, scelta === 'none' ? null : scelta)
+  }
+
+  const condividiCodice = () => {
+    if (!lobbyCode) return
+    const link = Linking.createURL(`/join/${lobbyCode}`)
+    void Share.share({
+      message: t('lobby.shareMessage', { lega: league?.name ?? '', codice: lobbyCode, link }),
+    })
+  }
+
   const [nameA, setNameA] = useState('')
   const [nameB, setNameB] = useState('')
   const [target, setTarget] = useState<TargetValue>('21')
@@ -144,12 +188,17 @@ export default function NewMatchScreen() {
   const [napola, setNapola] = useState<YesNo>('no')
   const [donna, setDonna] = useState<YesNo>('no')
 
-  const schierati = (team: TeamSlot) =>
-    roster.filter((persona) => lineup[persona.profileId] === team)
+  /** Nomi di chi è schierato in una squadra: soci, amici e ospiti insieme. */
+  const schierati = (team: TeamSlot) => [
+    ...roster.filter((persona) => lineup[persona.profileId] === team).map((p) => p.displayName),
+    ...Object.values(guests)
+      .filter((guest) => guest.team === team)
+      .map((guest) => guest.name),
+  ]
 
   /** Con i giocatori scelti il nome di squadra diventa superfluo: si deduce. */
   const nomeDaGiocatori = (team: TeamSlot) => {
-    const nomi = schierati(team).map((persona) => persona.displayName)
+    const nomi = schierati(team)
     return nomi.length > 0 ? nomi.join(' e ') : ''
   }
 
@@ -186,15 +235,27 @@ export default function NewMatchScreen() {
     setError(null)
     void (async () => {
       try {
+        const soci = Object.entries(lineup)
+          .filter((voce): voce is [string, 'A' | 'B'] => voce[1] !== 'none')
+          .map(([profileId, team]): MatchLineup => ({ kind: 'member', profileId, team }))
+
+        // Un ospite che ha effettuato l'accesso mentre entrava dal tavolo
+        // conta come socio a tutti gli effetti; chi ha già una riga fra i
+        // soci non va duplicato, capita se accede con lo stesso account già
+        // schierato sopra.
+        const ospiti = Object.values(guests).flatMap((guest): MatchLineup[] => {
+          if (guest.team === 'none') return []
+          if (guest.profileId && lineup[guest.profileId] !== undefined) return []
+          return guest.profileId
+            ? [{ kind: 'member', profileId: guest.profileId, team: guest.team }]
+            : [{ kind: 'guest', guestName: guest.name, team: guest.team }]
+        })
+
         const created = await createRemoteMatch({
           leagueId,
           rules,
           teamNames: teams,
-          // Chi avvia gioca: è il minimo che serve alle classifiche per
-          // giocatore. Schierare gli altri arriverà con la formazione vera.
-          lineup: Object.entries(lineup)
-            .filter((voce): voce is [string, 'A' | 'B'] => voce[1] !== 'none')
-            .map(([profileId, team]): MatchLineup => ({ profileId, team })),
+          lineup: [...soci, ...ospiti],
         })
         router.replace(`/match?remote=${created.id}`)
       } catch (cause) {
@@ -296,12 +357,64 @@ export default function NewMatchScreen() {
                   />
                 </View>
               ))}
+              {Object.entries(guests).map(([requestId, guest]) => (
+                <View key={requestId}>
+                  <Text className="mb-1.5 text-ink text-sm" numberOfLines={1}>
+                    {t('lobby.guestLabel', { nome: guest.name })}
+                  </Text>
+                  <Segmented
+                    testID={`formazione-ospite-${requestId}`}
+                    options={[
+                      { value: 'A' as const, label: teams.A, tone: 'a' as const },
+                      {
+                        value: 'none' as const,
+                        label: t('lineup.out'),
+                        tone: 'neutral' as const,
+                      },
+                      { value: 'B' as const, label: teams.B, tone: 'b' as const },
+                    ]}
+                    value={guest.team}
+                    onChange={(scelta) => piazzaOspite(requestId, scelta)}
+                  />
+                </View>
+              ))}
               {!formazioneCompleta ? (
                 <Text className="text-danger text-xs">{t('lineup.needBothTeams')}</Text>
               ) : (
                 <Text className="text-muted text-xs">{t('lineup.teamNamesFromPlayers')}</Text>
               )}
             </View>
+          )}
+        </Card>
+      ) : null}
+
+      {leagueId ? (
+        <Card title={t('lobby.title')} subtitle={t('lobby.hint')}>
+          {lobbyCode ? (
+            <View className="gap-3">
+              <Text
+                testID="codice-tavolo"
+                className="text-center font-bold text-2xl text-ink tracking-[6px]"
+              >
+                {t('lobby.code', { codice: lobbyCode })}
+              </Text>
+              <Button
+                label={t('lobby.share')}
+                variant="secondary"
+                testID="condividi-tavolo"
+                onPress={condividiCodice}
+              />
+              {Object.keys(guests).length === 0 ? (
+                <Text className="text-muted text-xs">{t('lobby.empty')}</Text>
+              ) : null}
+            </View>
+          ) : (
+            <Button
+              label={t('lobby.start')}
+              variant="secondary"
+              testID="genera-codice-tavolo"
+              onPress={condividiTavolo}
+            />
           )}
         </Card>
       ) : null}

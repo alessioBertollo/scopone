@@ -43,6 +43,8 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="friends" />
+            <Stack.Screen name="join/index" />
+            <Stack.Screen name="join/[code]" />
             <Stack.Screen name="new-match" />
             <Stack.Screen name="match" />
             <Stack.Screen name="hand" options={{ presentation: 'modal' }} />
