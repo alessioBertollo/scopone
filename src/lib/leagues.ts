@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { tr } from '../i18n/tr'
 import type { LeagueMemberRow, LeagueRole, LeagueRow, ProfileRow } from './database.types'
+import { codeOf, type ErrorMessages, fallbackName, translateError } from './errors'
 import { getSupabase } from './supabase'
 
 export type { LeagueRole }
@@ -39,14 +40,6 @@ const CODE_LENGTH = 6
 const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`)
 
 /**
- * Nome di ripiego quando il profilo di un membro non è leggibile: è solo
- * ciò che si legge a schermo, quindi segue la lingua scelta.
- */
-function fallbackName(): string {
-  return tr('common.player')
-}
-
-/**
  * Un messaggio per ogni cosa che può andare storta, con dentro la mossa
  * successiva. Postgres parla di SQLSTATE e di policy: a chi sta cercando di
  * entrare in una lega non dicono niente di utile.
@@ -54,7 +47,7 @@ function fallbackName(): string {
  * Sono funzioni e non stringhe perché l'oggetto viene valutato all'import:
  * tradurre qui congelerebbe la lingua a quella del primo caricamento.
  */
-const MESSAGES = {
+const MESSAGES: ErrorMessages & Record<string, () => string> = {
   network: () => tr('leagues.network'),
   noSession: () => tr('leagues.noSession'),
   nameLength: () => tr('leagues.nameLength', { minimo: NAME_MIN, massimo: NAME_MAX }),
@@ -70,7 +63,17 @@ const MESSAGES = {
   listFailed: () => tr('leagues.listFailed'),
   loadFailed: () => tr('leagues.loadFailed'),
   leaveFailed: () => tr('leagues.leaveFailed'),
-} as const
+}
+
+/**
+ * Il caso specifico delle leghe, poi si delega alla traduzione condivisa.
+ */
+function translate(error: unknown, fallback: string): Error {
+  // Violazione di un check: sui dati che mandiamo può essere solo il nome,
+  // perché il codice di invito lo genera il server.
+  if (codeOf(error) === '23514') return new Error(MESSAGES.nameLength(), { cause: error })
+  return translateError(error, fallback, MESSAGES)
+}
 
 const LEAGUE_COLUMNS = 'id, name, created_by, invite_code, created_at'
 const MEMBER_COLUMNS = 'league_id, profile_id, role, joined_at'
@@ -353,94 +356,6 @@ function readUuid(data: unknown): string | null {
     return typeof first === 'string' && first.length > 0 ? first : null
   }
   return null
-}
-
-type ErrorFields = {
-  name: string | undefined
-  code: string | undefined
-  status: number | undefined
-  message: string | undefined
-}
-
-function readErrorFields(error: unknown): ErrorFields {
-  if (typeof error !== 'object' || error === null) return empty()
-
-  const fields: Record<string, unknown> = { ...error }
-  // Su un `Error` vero `name` e `message` stanno sul prototipo o sono non
-  // enumerabili: lo spread da solo non se li porta dietro.
-  if (error instanceof Error) {
-    fields.name = error.name
-    fields.message = error.message
-  }
-
-  return {
-    name: typeof fields.name === 'string' ? fields.name : undefined,
-    code: typeof fields.code === 'string' ? fields.code : undefined,
-    status: typeof fields.status === 'number' ? fields.status : undefined,
-    message: typeof fields.message === 'string' ? fields.message : undefined,
-  }
-}
-
-function empty(): ErrorFields {
-  return { name: undefined, code: undefined, status: undefined, message: undefined }
-}
-
-function fail(message: string, cause: unknown): Error {
-  return new Error(message, { cause })
-}
-
-/**
- * Traduce l'errore grezzo in una frase utile. Il `fallback` cambia da
- * operazione a operazione perché un guasto ignoto mentre si crea una lega e
- * uno mentre la si carica chiedono all'utente cose diverse.
- */
-function translate(error: unknown, fallback: string): Error {
-  const { name, code, status, message } = readErrorFields(error)
-
-  const offline =
-    name === 'AuthRetryableFetchError' ||
-    status === 0 ||
-    (message !== undefined &&
-      /failed to fetch|network request failed|networkerror/i.test(message))
-  if (offline) return fail(MESSAGES.network(), error)
-
-  // P0001 è il codice del `raise exception` di plpgsql: i messaggi di
-  // `create_league` e `join_league_by_code` sono già scritti per l'utente,
-  // quindi sostituirli con un generico sarebbe una perdita. Restano in
-  // italiano anche in inglese: li scrive il database, non l'app.
-  if (code === 'P0001' && message !== undefined && message.trim().length > 0) {
-    return fail(ensureStop(message.trim()), error)
-  }
-
-  switch (code) {
-    // Violazione di un check: sui dati che mandiamo può essere solo il nome,
-    // perché il codice di invito lo genera il server.
-    case '23514':
-      return fail(MESSAGES.nameLength(), error)
-    // Nessun profilo a cui agganciare l'iscrizione: la sessione c'è ma la
-    // riga creata dal trigger non è ancora arrivata.
-    case '23503':
-      return fail(MESSAGES.noSession(), error)
-    case '42501':
-      return fail(MESSAGES.forbidden(), error)
-    case 'PGRST301':
-    case 'session_expired':
-    case 'session_not_found':
-    case 'refresh_token_not_found':
-    case 'bad_jwt':
-      return fail(MESSAGES.noSession(), error)
-    default:
-      break
-  }
-
-  if (status === 401 || status === 403) return fail(MESSAGES.forbidden(), error)
-
-  return fail(fallback, error)
-}
-
-/** I messaggi di Postgres arrivano senza punto finale, gli altri ce l'hanno. */
-function ensureStop(message: string): string {
-  return /[.!?]$/.test(message) ? message : `${message}.`
 }
 
 /**

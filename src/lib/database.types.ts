@@ -13,11 +13,27 @@ import type { ByTeam, TeamId } from '../domain/teams'
 
 export type MatchStatus = 'ongoing' | 'finished' | 'abandoned'
 export type LeagueRole = 'owner' | 'member'
+export type FriendStatus = 'pending' | 'accepted'
 
 export type ProfileRow = {
   id: string
   display_name: string
+  /** Codice da dettare per farsi aggiungere. Aggiunto dalla migrazione 0004. */
+  friend_code: string
   created_at: string
+}
+
+/**
+ * Non una tabella ma il risultato di `list_my_friends()`: la tabella
+ * `friendships` memorizza la coppia in ordine canonico, e chi guarda vuole
+ * sapere chi è l'altro, non chi ha l'identificativo più basso.
+ */
+export type FriendRow = {
+  profile_id: string
+  display_name: string
+  status: FriendStatus
+  /** Vero se la richiesta l'ha mandata l'altra persona. */
+  incoming: boolean
 }
 
 export type LeagueRow = {
