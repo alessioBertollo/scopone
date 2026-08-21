@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { DEFAULT_RULES, type PrimieraMode, type WinRule } from '../src/domain/rules'
 import { useTranslation } from '../src/i18n/useTranslation'
 import { getLeague, type LeagueMember } from '../src/lib/leagues'
 import { createRemoteMatch, type MatchLineup } from '../src/lib/matches'
 import { useAuthStore } from '../src/store/auth-store'
+import { useFriendsStore } from '../src/store/friends-store'
 import { useLeaguesStore } from '../src/store/leagues-store'
 import { useMatchStore } from '../src/store/match-store'
 import { Button } from '../src/ui/Button'
@@ -85,6 +86,11 @@ export default function NewMatchScreen() {
   const [members, setMembers] = useState<LeagueMember[] | null>(null)
   const [lineup, setLineup] = useState<Record<string, TeamSlot>>({})
 
+  // Gli amici accettati si schierano insieme ai soci di lega: spesso si
+  // gioca con le stesse persone senza che siano (ancora) nella stessa lega.
+  const friends = useFriendsStore((state) => state.friends)
+  const refreshFriends = useFriendsStore((state) => state.refresh)
+
   useEffect(() => {
     if (!leagueId) return
 
@@ -102,11 +108,32 @@ export default function NewMatchScreen() {
         // partita senza classifica che nessuna partita.
         if (!annullato) setMembers([])
       })
+    void refreshFriends()
 
     return () => {
       annullato = true
     }
-  }, [leagueId, me])
+  }, [leagueId, me, refreshFriends])
+
+  /**
+   * Soci di lega e amici accettati, in un solo elenco: chi è già socio non
+   * compare due volte come amico, la formazione lo tratta comunque come
+   * un'unica persona.
+   */
+  const roster = useMemo(() => {
+    const elenco: { profileId: string; displayName: string; friend: boolean }[] = (
+      members ?? []
+    ).map((member) => ({ ...member, friend: false }))
+    const noti = new Set(elenco.map((persona) => persona.profileId))
+
+    for (const amico of friends) {
+      if (amico.status !== 'accepted' || noti.has(amico.profileId)) continue
+      elenco.push({ profileId: amico.profileId, displayName: amico.displayName, friend: true })
+      noti.add(amico.profileId)
+    }
+
+    return elenco
+  }, [members, friends])
 
   const [nameA, setNameA] = useState('')
   const [nameB, setNameB] = useState('')
@@ -118,11 +145,11 @@ export default function NewMatchScreen() {
   const [donna, setDonna] = useState<YesNo>('no')
 
   const schierati = (team: TeamSlot) =>
-    (members ?? []).filter((member) => lineup[member.profileId] === team)
+    roster.filter((persona) => lineup[persona.profileId] === team)
 
   /** Con i giocatori scelti il nome di squadra diventa superfluo: si deduce. */
   const nomeDaGiocatori = (team: TeamSlot) => {
-    const nomi = schierati(team).map((member) => member.displayName)
+    const nomi = schierati(team).map((persona) => persona.displayName)
     return nomi.length > 0 ? nomi.join(' e ') : ''
   }
 
@@ -242,15 +269,17 @@ export default function NewMatchScreen() {
             <ActivityIndicator />
           ) : (
             <View className="gap-3">
-              {members.map((member) => (
-                <View key={member.profileId}>
+              {roster.map((persona) => (
+                <View key={persona.profileId}>
                   <Text className="mb-1.5 text-ink text-sm" numberOfLines={1}>
-                    {member.profileId === me?.id
-                      ? t('lineup.you', { nome: member.displayName })
-                      : member.displayName}
+                    {persona.profileId === me?.id
+                      ? t('lineup.you', { nome: persona.displayName })
+                      : persona.friend
+                        ? t('lineup.friend', { nome: persona.displayName })
+                        : persona.displayName}
                   </Text>
                   <Segmented
-                    testID={`formazione-${member.profileId}`}
+                    testID={`formazione-${persona.profileId}`}
                     options={[
                       { value: 'A' as const, label: teams.A, tone: 'a' as const },
                       {
@@ -260,9 +289,9 @@ export default function NewMatchScreen() {
                       },
                       { value: 'B' as const, label: teams.B, tone: 'b' as const },
                     ]}
-                    value={lineup[member.profileId] ?? 'none'}
+                    value={lineup[persona.profileId] ?? 'none'}
                     onChange={(scelta) =>
-                      setLineup((corrente) => ({ ...corrente, [member.profileId]: scelta }))
+                      setLineup((corrente) => ({ ...corrente, [persona.profileId]: scelta }))
                     }
                   />
                 </View>

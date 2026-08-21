@@ -26,7 +26,17 @@ const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 export const CODE_LENGTH = 6
 const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`)
 
-const MESSAGES: ErrorMessages & Record<string, () => string> = {
+type FriendsMessages = ErrorMessages & {
+  malformedCode: () => string
+  ownCode: () => string
+  codeFailed: () => string
+  listFailed: () => string
+  sendFailed: () => string
+  acceptFailed: () => string
+  removeFailed: () => string
+}
+
+const MESSAGES: FriendsMessages = {
   network: () => tr('friends.network'),
   noSession: () => tr('friends.noSession'),
   forbidden: () => tr('friends.forbidden'),

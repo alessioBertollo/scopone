@@ -150,6 +150,7 @@ export default function HomeScreen() {
   return (
     <Screen
       scroll
+      tabs
       footer={
         <Button
           label={t('home.newMatch')}

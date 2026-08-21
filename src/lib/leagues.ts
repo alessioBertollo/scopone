@@ -47,7 +47,22 @@ const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`)
  * Sono funzioni e non stringhe perché l'oggetto viene valutato all'import:
  * tradurre qui congelerebbe la lingua a quella del primo caricamento.
  */
-const MESSAGES: ErrorMessages & Record<string, () => string> = {
+type LeaguesMessages = ErrorMessages & {
+  nameLength: () => string
+  malformedCode: () => string
+  invalidCode: () => string
+  notFound: () => string
+  notMember: () => string
+  ownerCannotLeave: () => string
+  deleteFailed: () => string
+  createFailed: () => string
+  joinFailed: () => string
+  listFailed: () => string
+  loadFailed: () => string
+  leaveFailed: () => string
+}
+
+const MESSAGES: LeaguesMessages = {
   network: () => tr('leagues.network'),
   noSession: () => tr('leagues.noSession'),
   nameLength: () => tr('leagues.nameLength', { minimo: NAME_MIN, massimo: NAME_MAX }),
