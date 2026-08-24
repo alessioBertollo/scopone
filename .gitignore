@@ -45,3 +45,8 @@ coverage/
 
 # Supabase (non committare .env)
 .env
+
+# Pacchetti prodotti dalle build. Pesano decine di MB: se restano qui vengono
+# spediti a EAS a ogni build, insieme al codice che invece pesa un megabyte.
+*.aab
+*.apk
