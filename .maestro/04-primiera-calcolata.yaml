@@ -1,4 +1,4 @@
-appId: com.alessiobertollo.scopone
+appId: scopone.contapunti
 name: Calcolo della primiera dalle carte
 ---
 - launchApp:

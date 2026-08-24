@@ -9,10 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.alessiobertollo.scopone"
+      "bundleIdentifier": "scopone.contapunti"
     },
     "android": {
-      "package": "com.alessiobertollo.scopone",
+      "package": "scopone.contapunti",
       "adaptiveIcon": {
         "backgroundColor": "#1B5E3F",
         "foregroundImage": "./assets/android-icon-foreground.png",
