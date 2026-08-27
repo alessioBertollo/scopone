@@ -1,23 +1,30 @@
 import { useRouter } from 'expo-router'
+import type { ReactElement } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import type { TranslationKey } from '../i18n'
 import { useTranslation } from '../i18n/useTranslation'
 import { cn } from './cn'
+import { FriendsIcon, HomeIcon, StandingsIcon } from './Icon'
 
 export type TabRoute = '/' | '/friends' | '/standings'
 
 type Tab = {
   href: TabRoute
-  icon: string
+  Icon: (props: { active: boolean }) => ReactElement
   labelKey: TranslationKey
   testID: string
 }
 
 const TABS: Tab[] = [
-  { href: '/', icon: '🏠', labelKey: 'tabs.home', testID: 'tab-home' },
-  { href: '/friends', icon: '👥', labelKey: 'tabs.friends', testID: 'tab-friends' },
-  { href: '/standings', icon: '🏆', labelKey: 'tabs.standings', testID: 'tab-standings' },
+  { href: '/', Icon: HomeIcon, labelKey: 'tabs.home', testID: 'tab-home' },
+  { href: '/friends', Icon: FriendsIcon, labelKey: 'tabs.friends', testID: 'tab-friends' },
+  {
+    href: '/standings',
+    Icon: StandingsIcon,
+    labelKey: 'tabs.standings',
+    testID: 'tab-standings',
+  },
 ]
 
 /**
@@ -44,7 +51,7 @@ export function TabBar({ active }: { active: TabRoute }) {
               onPress={() => router.navigate(tab.href)}
               className="flex-1 items-center gap-0.5 py-2.5 active:opacity-70"
             >
-              <Text className="text-xl">{tab.icon}</Text>
+              <tab.Icon active={selected} />
               <Text
                 className={cn('text-xs', selected ? 'font-semibold text-felt' : 'text-muted')}
               >

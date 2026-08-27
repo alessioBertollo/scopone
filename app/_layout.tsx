@@ -21,6 +21,7 @@ export default function RootLayout() {
   const hydrated = useMatchHydrated()
   const restore = useAuthStore((state) => state.restore)
   const theme = useSettingsStore((state) => state.theme)
+  const signedIn = useAuthStore((state) => state.status) === 'signedIn'
   const tab = tabAt(usePathname())
 
   // Il tema scelto va riapplicato a ogni avvio: NativeWind riparte sempre da
@@ -54,7 +55,7 @@ export default function RootLayout() {
             <Stack.Screen name="league/new" options={{ presentation: 'modal' }} />
             <Stack.Screen name="league/[id]" />
           </Stack>
-          {tab ? <TabBar active={tab} /> : null}
+          {tab && signedIn ? <TabBar active={tab} /> : null}
         </View>
       ) : (
         // Schermo pieno del colore di sfondo: evita il lampo bianco mentre

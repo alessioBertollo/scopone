@@ -59,7 +59,12 @@ export const it = {
 
   'home.settings': 'Impostazioni',
   'home.newMatch': 'Nuova partita',
-  'home.joinByCode': 'Hai un codice per entrare in una partita?',
+  'home.play': 'Gioca',
+  'home.join': 'Partecipa',
+  'home.joinPitch':
+    'Se qualcuno ha avviato una partita e ti ha passato un codice o un link, entri in formazione da qui. Non serve un account.',
+  'home.joinByCode': 'Entra con un codice',
+  'home.account': 'Account',
   'home.pending': 'Partita in sospeso',
   'home.resume': 'Mancano {punti} punti · riprendi da dove eravate',
   'home.leagues': 'Le tue leghe',
@@ -80,8 +85,6 @@ export const it = {
   'home.ongoingWatching': 'In corso · la stai seguendo',
   'home.noMatchesSignedIn':
     'Nessuna partita ancora. Quelle che giocherai in lega compariranno qui.',
-  'home.noMatchesSignedOut':
-    'Le partite giocate in lega compariranno qui. Al momento l’app tiene solo quella in corso sul telefono.',
 
   'signIn.title': 'Accedi',
   'signIn.noBackend':

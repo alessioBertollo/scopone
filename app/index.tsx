@@ -148,139 +148,156 @@ export default function HomeScreen() {
   const punteggioLocale = `${teamNames.A} ${local.totals.A} – ${teamNames.B} ${local.totals.B}`
 
   return (
-    <Screen
-      scroll
-      tabs
-      footer={
-        <Button
-          label={t('home.newMatch')}
-          testID="nuova-partita"
-          onPress={() => router.push('/new-match')}
-        />
-      }
-    >
+    // La barra delle schede compare solo con l'accesso fatto: senza account
+    // porta a pagine vuote, e lo spazio che le si riserva sotto va tolto con lei.
+    <Screen scroll tabs={signedIn}>
       <View className="flex-row items-start justify-between pt-6 pb-1">
         <View className="flex-1">
           <Text className="font-bold text-4xl text-felt tracking-tight">Scopone</Text>
           <Text className="mt-1 text-base text-muted">{t('app.tagline')}</Text>
         </View>
-        {
-          <Pressable
-            testID="vai-impostazioni"
-            accessibilityRole="button"
-            accessibilityLabel={t('home.settings')}
-            onPress={() => router.push('/settings')}
-            className="mt-2 rounded-full border border-line bg-surface px-3 py-2 active:opacity-70"
-          >
-            <Text className="text-ink text-sm" numberOfLines={1}>
-              {signedIn && user ? user.displayName : t('home.settings')}
-            </Text>
-          </Pressable>
-        }
+        <Pressable
+          testID="vai-impostazioni"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.settings')}
+          onPress={() => router.push('/settings')}
+          className="mt-2 rounded-full border border-line bg-surface px-3 py-2 active:opacity-70"
+        >
+          <Text className="text-ink text-sm" numberOfLines={1}>
+            {signedIn && user ? user.displayName : t('home.settings')}
+          </Text>
+        </Pressable>
       </View>
 
-      {isBackendConfigured ? (
-        <Pressable
-          testID="vai-ingresso-codice"
-          accessibilityRole="button"
-          onPress={() => router.push('/join')}
-          className="active:opacity-60"
-        >
-          <Text className="text-felt text-sm">{t('home.joinByCode')}</Text>
-        </Pressable>
-      ) : null}
+      {/* Contare una partita al tavolo è il caso principale: sta in cima e
+          non dipende da niente — né da un account né dalla rete. */}
+      <SectionTitle>{t('home.play')}</SectionTitle>
+      <Button
+        label={t('home.newMatch')}
+        testID="nuova-partita"
+        onPress={() => router.push('/new-match')}
+      />
 
       {inCorso ? (
+        <RowCard
+          accent
+          testID="riprendi-partita"
+          title={punteggioLocale}
+          detail={t('home.resume', {
+            punti: Math.min(local.remaining.A, local.remaining.B),
+          })}
+          onPress={() => router.push('/match')}
+        />
+      ) : null}
+
+      {/* Era un collegamento in corpo piccolo, e chi arrivava con un codice in
+          mano non lo trovava. Entrare in una partita altrui è un modo d'uso a
+          sé, non una nota a margine. */}
+      {isBackendConfigured ? (
         <>
-          <SectionTitle>{t('home.pending')}</SectionTitle>
-          <RowCard
-            accent
-            testID="riprendi-partita"
-            title={punteggioLocale}
-            detail={t('home.resume', {
-              punti: Math.min(local.remaining.A, local.remaining.B),
-            })}
-            onPress={() => router.push('/match')}
-          />
+          <SectionTitle>{t('home.join')}</SectionTitle>
+          <Card>
+            <Text className="text-ink text-sm">{t('home.joinPitch')}</Text>
+            <View className="mt-4">
+              <Button
+                label={t('home.joinByCode')}
+                variant="secondary"
+                testID="vai-ingresso-codice"
+                onPress={() => router.push('/join')}
+              />
+            </View>
+          </Card>
         </>
       ) : null}
 
-      <SectionTitle>{t('home.leagues')}</SectionTitle>
       {!isBackendConfigured ? (
-        <Card>
-          <Text className="text-muted text-sm">{t('home.noBackend')}</Text>
-        </Card>
-      ) : !signedIn ? (
-        <Card>
-          <Text className="text-ink text-sm">{t('home.leaguesPitch')}</Text>
-          <View className="mt-4">
-            <Button
-              label={t('home.signInToStart')}
-              variant="secondary"
-              testID="vai-accesso"
-              onPress={() => router.push('/sign-in')}
-            />
-          </View>
-        </Card>
-      ) : leaguesStatus === 'loading' ? (
-        <Card>
-          <ActivityIndicator />
-        </Card>
-      ) : leagues.length === 0 ? (
-        <Card>
-          <Text className="text-ink text-sm">{t('home.noLeagues')}</Text>
-          <View className="mt-4">
-            <Button
-              label={t('home.createOrJoin')}
-              variant="secondary"
-              testID="crea-lega"
-              onPress={() => router.push('/league/new')}
-            />
-          </View>
-        </Card>
-      ) : (
-        <View className="gap-2">
-          {leagues.map((league) => (
-            <RowCard
-              key={league.id}
-              testID={`lega-${league.id}`}
-              title={league.name}
-              detail={t(
-                league.memberCount === 1 ? 'home.leagueOnePlayer' : 'home.leagueManyPlayers',
-                { numero: league.memberCount, codice: league.inviteCode },
-              )}
-              onPress={() => router.push(`/league/${league.id}`)}
-            />
-          ))}
-          <Button
-            label={t('home.createOrJoin')}
-            variant="ghost"
-            testID="crea-lega"
-            onPress={() => router.push('/league/new')}
-          />
-        </View>
-      )}
-
-      {daConcludere.length > 0 ? (
         <>
-          <SectionTitle>{t('home.toFinish')}</SectionTitle>
-          <View className="gap-2">{righe(daConcludere)}</View>
+          <SectionTitle>{t('home.leagues')}</SectionTitle>
+          <Card>
+            <Text className="text-muted text-sm">{t('home.noBackend')}</Text>
+          </Card>
         </>
-      ) : null}
-
-      <SectionTitle>{t('home.recent')}</SectionTitle>
-      {loadingRemote ? (
-        <Card>
-          <ActivityIndicator />
-        </Card>
-      ) : concluse.length > 0 ? (
-        <View className="gap-2">{righe(concluse)}</View>
+      ) : !signedIn ? (
+        /* Senza accesso la home finisce qui. Leghe, classifiche e partite
+           condivise esistono solo con un account: mostrarle vuote, o mostrarle
+           e poi negarle, insegna solo che l'app non funziona. */
+        <>
+          <SectionTitle>{t('home.account')}</SectionTitle>
+          <Card>
+            <Text className="text-ink text-sm">{t('home.leaguesPitch')}</Text>
+            <View className="mt-4">
+              <Button
+                label={t('home.signInToStart')}
+                testID="vai-accesso"
+                onPress={() => router.push('/sign-in')}
+              />
+            </View>
+          </Card>
+        </>
       ) : (
-        <Card>
-          <Text className="text-muted text-sm">
-            {signedIn ? t('home.noMatchesSignedIn') : t('home.noMatchesSignedOut')}
-          </Text>
-        </Card>
+        <>
+          <SectionTitle>{t('home.leagues')}</SectionTitle>
+          {leaguesStatus === 'loading' ? (
+            <Card>
+              <ActivityIndicator />
+            </Card>
+          ) : leagues.length === 0 ? (
+            <Card>
+              <Text className="text-ink text-sm">{t('home.noLeagues')}</Text>
+              <View className="mt-4">
+                <Button
+                  label={t('home.createOrJoin')}
+                  variant="secondary"
+                  testID="crea-lega"
+                  onPress={() => router.push('/league/new')}
+                />
+              </View>
+            </Card>
+          ) : (
+            <View className="gap-2">
+              {leagues.map((league) => (
+                <RowCard
+                  key={league.id}
+                  testID={`lega-${league.id}`}
+                  title={league.name}
+                  detail={t(
+                    league.memberCount === 1
+                      ? 'home.leagueOnePlayer'
+                      : 'home.leagueManyPlayers',
+                    { numero: league.memberCount, codice: league.inviteCode },
+                  )}
+                  onPress={() => router.push(`/league/${league.id}`)}
+                />
+              ))}
+              <Button
+                label={t('home.createOrJoin')}
+                variant="ghost"
+                testID="crea-lega"
+                onPress={() => router.push('/league/new')}
+              />
+            </View>
+          )}
+
+          {daConcludere.length > 0 ? (
+            <>
+              <SectionTitle>{t('home.toFinish')}</SectionTitle>
+              <View className="gap-2">{righe(daConcludere)}</View>
+            </>
+          ) : null}
+
+          <SectionTitle>{t('home.recent')}</SectionTitle>
+          {loadingRemote ? (
+            <Card>
+              <ActivityIndicator />
+            </Card>
+          ) : concluse.length > 0 ? (
+            <View className="gap-2">{righe(concluse)}</View>
+          ) : (
+            <Card>
+              <Text className="text-muted text-sm">{t('home.noMatchesSignedIn')}</Text>
+            </Card>
+          )}
+        </>
       )}
     </Screen>
   )

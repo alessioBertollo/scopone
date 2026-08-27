@@ -64,7 +64,12 @@ export const en: Record<keyof typeof it, string> = {
 
   'home.settings': 'Settings',
   'home.newMatch': 'New match',
-  'home.joinByCode': 'Have a code to join a match?',
+  'home.play': 'Play',
+  'home.join': 'Join',
+  'home.joinPitch':
+    'If someone started a match and gave you a code or a link, you can take your seat from here. No account needed.',
+  'home.joinByCode': 'Join with a code',
+  'home.account': 'Account',
   'home.pending': 'Unfinished match',
   'home.resume': '{punti} points to go · pick up where you left off',
   'home.leagues': 'Your leagues',
@@ -84,8 +89,6 @@ export const en: Record<keyof typeof it, string> = {
   'home.ongoingYours': 'Ongoing · you are running it',
   'home.ongoingWatching': 'Ongoing · you are following it',
   'home.noMatchesSignedIn': 'No matches yet. The ones you play in a league will show up here.',
-  'home.noMatchesSignedOut':
-    'Matches played in a league will show up here. For now the app only keeps the one running on this phone.',
 
   'signIn.title': 'Sign in',
   'signIn.noBackend':
