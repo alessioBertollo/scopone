@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getLeague } from '../lib/leagues'
+import {
+  acceptLeagueInvite,
+  declineLeagueInvite,
+  getLeague,
+  inviteFriendToLeague,
+  listMyLeagueInvites,
+} from '../lib/leagues'
 import { useLeaguesStore } from './leagues-store'
 
 /**
@@ -31,15 +37,25 @@ const backend = vi.hoisted(() => {
     then: Promise<Reply>['then']
   }
 
-  type Db = { profiles: Row[]; leagues: Row[]; league_members: Row[] }
+  type Db = { profiles: Row[]; leagues: Row[]; league_members: Row[]; friendships: Row[] }
 
-  const db: Db = { profiles: [], leagues: [], league_members: [] }
+  const db: Db = { profiles: [], leagues: [], league_members: [], friendships: [] }
 
   /** Le tabelle toccate dallo strato leghe, e nessun'altra. */
   function bucket(name: string): Row[] {
     if (name === 'profiles') return db.profiles
     if (name === 'leagues') return db.leagues
+    if (name === 'friendships') return db.friendships
     return db.league_members
+  }
+
+  /** Come `is_friend_of`: la coppia è memorizzata in ordine canonico. */
+  function sonoAmici(a: string, b: string): boolean {
+    const basso = a < b ? a : b
+    const alto = a < b ? b : a
+    return db.friendships.some(
+      (row) => row.low_id === basso && row.high_id === alto && row.status === 'accepted',
+    )
   }
 
   const state = {
@@ -58,6 +74,7 @@ const backend = vi.hoisted(() => {
     db.profiles = []
     db.leagues = []
     db.league_members = []
+    db.friendships = []
     state.session = null
     state.errors = {}
     state.rpcErrors = {}
@@ -147,9 +164,62 @@ const backend = vi.hoisted(() => {
         league_id: league.id,
         profile_id: uid,
         role: 'owner',
+        status: 'member',
         joined_at: '2026-01-01T00:00:00Z',
       })
       return { data: league, error: null }
+    }
+
+    if (fn === 'invite_friend_to_league') {
+      const lega = String(args.target_league ?? '')
+      const amico = String(args.friend ?? '')
+
+      const dentro = db.league_members.some(
+        (row) => row.league_id === lega && row.profile_id === uid && row.status === 'member',
+      )
+      if (!dentro) return { data: null, error: raise('Non fai parte di questa lega') }
+      if (!sonoAmici(uid, amico)) {
+        return { data: null, error: raise('Puoi invitare solo i tuoi amici') }
+      }
+
+      // Un secondo invito non deve retrocedere un membro a invitato.
+      const giaPresente = db.league_members.some(
+        (row) => row.league_id === lega && row.profile_id === amico,
+      )
+      if (!giaPresente) {
+        db.league_members.push({
+          league_id: lega,
+          profile_id: amico,
+          role: 'member',
+          status: 'invited',
+          invited_by: uid,
+          joined_at: '2026-03-01T00:00:00Z',
+        })
+      }
+      return { data: null, error: null }
+    }
+
+    if (fn === 'accept_league_invite') {
+      const lega = String(args.target_league ?? '')
+      const riga = db.league_members.find(
+        (row) => row.league_id === lega && row.profile_id === uid && row.status === 'invited',
+      )
+      if (!riga) return { data: null, error: raise('Nessun invito da accettare') }
+
+      riga.status = 'member'
+      return { data: null, error: null }
+    }
+
+    if (fn === 'list_my_league_invites') {
+      const inviti = db.league_members
+        .filter((row) => row.profile_id === uid && row.status === 'invited')
+        .map((row) => ({
+          league_id: row.league_id,
+          league_name: db.leagues.find((lega) => lega.id === row.league_id)?.name ?? '',
+          invited_by_name:
+            db.profiles.find((profilo) => profilo.id === row.invited_by)?.display_name ?? '',
+        }))
+      return { data: inviti, error: null }
     }
 
     if (fn === 'join_league_by_code') {
@@ -167,6 +237,7 @@ const backend = vi.hoisted(() => {
           league_id: league.id,
           profile_id: uid,
           role: 'member',
+          status: 'member',
           joined_at: '2026-02-01T00:00:00Z',
         })
       }
@@ -216,7 +287,12 @@ function seedSession(user = ADA): void {
   )
 }
 
-type Iscritto = { profileId: string; role?: 'owner' | 'member'; joinedAt?: string }
+type Iscritto = {
+  profileId: string
+  role?: 'owner' | 'member'
+  joinedAt?: string
+  status?: 'invited' | 'member'
+}
 
 function seedLeague(
   id: string,
@@ -238,6 +314,7 @@ function seedLeague(
       league_id: id,
       profile_id: member.profileId,
       role: member.role ?? 'member',
+      status: member.status ?? 'member',
       joined_at: member.joinedAt ?? '2026-01-02T00:00:00Z',
     })
   }
@@ -580,5 +657,100 @@ describe('senza backend configurato', () => {
       process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = key
       vi.resetModules()
     }
+  })
+})
+
+/** Come `send_friend_request` seguito da `accept_friend_request`. */
+function seedAmicizia(a: string, b: string): void {
+  const basso = a < b ? a : b
+  const alto = a < b ? b : a
+  backend.db.friendships.push({ low_id: basso, high_id: alto, status: 'accepted' })
+}
+
+describe('inviti alla lega', () => {
+  it('mette l amico in attesa invece di iscriverlo', async () => {
+    seedSession(ADA)
+    seedAmicizia(ADA.id, BRUNO.id)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [{ profileId: ADA.id, role: 'owner' }])
+
+    await inviteFriendToLeague('lega-mia', BRUNO.id)
+
+    const { league, members, invited } = await getLeague('lega-mia')
+    // Un invito non gonfia il numero dei partecipanti.
+    expect(league.memberCount).toBe(1)
+    expect(members.map((m) => m.profileId)).toEqual([ADA.id])
+    expect(invited.map((m) => m.displayName)).toEqual(['Bruno'])
+  })
+
+  it('non invita chi non è un amico', async () => {
+    seedSession(ADA)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [{ profileId: ADA.id, role: 'owner' }])
+
+    await expect(inviteFriendToLeague('lega-mia', BRUNO.id)).rejects.toThrow(/amici/i)
+  })
+
+  it('non invita in una lega di cui non si fa parte', async () => {
+    seedSession(ADA)
+    seedAmicizia(ADA.id, BRUNO.id)
+    seedLeague('lega-altrui', 'Altrove', 'FGHJK3', BRUNO.id, [
+      { profileId: BRUNO.id, role: 'owner' },
+    ])
+
+    await expect(inviteFriendToLeague('lega-altrui', BRUNO.id)).rejects.toThrow(/lega/i)
+  })
+
+  it('mostra a chi lo riceve il nome della lega e di chi lo ha mandato', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+    // `invited_by` lo scrive la funzione: qui la riga è seminata a mano.
+    const riga = backend.db.league_members.find((row) => row.profile_id === BRUNO.id)
+    if (riga) riga.invited_by = ADA.id
+
+    expect(await listMyLeagueInvites()).toEqual([
+      { leagueId: 'lega-mia', leagueName: 'Giovedì', invitedByName: 'Ada' },
+    ])
+  })
+
+  it('accettando si diventa partecipanti', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+
+    await acceptLeagueInvite('lega-mia')
+
+    const { league, members, invited } = await getLeague('lega-mia')
+    expect(league.memberCount).toBe(2)
+    expect(members.map((m) => m.profileId).sort()).toEqual([ADA.id, BRUNO.id].sort())
+    expect(invited).toEqual([])
+    expect(await listMyLeagueInvites()).toEqual([])
+  })
+
+  it('rifiutando l invito sparisce', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+
+    await declineLeagueInvite('lega-mia')
+
+    expect(await listMyLeagueInvites()).toEqual([])
+    expect(backend.db.league_members.some((row) => row.profile_id === BRUNO.id)).toBe(false)
+  })
+
+  it('accettare due volte non riesce la seconda', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+
+    await acceptLeagueInvite('lega-mia')
+    await expect(acceptLeagueInvite('lega-mia')).rejects.toThrow(/invito/i)
   })
 })

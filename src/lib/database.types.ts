@@ -14,6 +14,7 @@ import type { ByTeam, TeamId } from '../domain/teams'
 export type MatchStatus = 'ongoing' | 'finished' | 'abandoned'
 export type LeagueRole = 'owner' | 'member'
 export type FriendStatus = 'pending' | 'accepted'
+export type LeagueMemberStatus = 'invited' | 'member'
 
 export type ProfileRow = {
   id: string
@@ -48,7 +49,20 @@ export type LeagueMemberRow = {
   league_id: string
   profile_id: string
   role: LeagueRole
+  /** `invited` è una proposta in attesa: non conta come appartenenza. */
+  status: LeagueMemberStatus
   joined_at: string
+}
+
+/**
+ * Non una tabella ma il risultato di `list_my_league_invites()`: chi è
+ * invitato non fa ancora parte della lega, quindi non può leggerne il nome
+ * dalle policy, e senza quella funzione l'invito sarebbe un identificativo.
+ */
+export type LeagueInviteRow = {
+  league_id: string
+  league_name: string
+  invited_by_name: string
 }
 
 export type MatchRow = {

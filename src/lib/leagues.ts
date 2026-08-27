@@ -1,6 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { tr } from '../i18n/tr'
-import type { LeagueMemberRow, LeagueRole, LeagueRow, ProfileRow } from './database.types'
+import type {
+  LeagueInviteRow,
+  LeagueMemberRow,
+  LeagueMemberStatus,
+  LeagueRole,
+  LeagueRow,
+  ProfileRow,
+} from './database.types'
 import { codeOf, type ErrorMessages, fallbackName, translateError } from './errors'
 import { getSupabase } from './supabase'
 
@@ -25,6 +32,13 @@ export type LeagueMember = {
   displayName: string
   role: LeagueRole
   joinedAt: string
+}
+
+/** Un invito ricevuto, con il nome della lega e di chi l'ha mandato. */
+export type LeagueInvite = {
+  leagueId: string
+  leagueName: string
+  invitedByName: string
 }
 
 /** Stessi limiti del check su `leagues.name` nella migrazione 0001. */
@@ -60,6 +74,11 @@ type LeaguesMessages = ErrorMessages & {
   listFailed: () => string
   loadFailed: () => string
   leaveFailed: () => string
+  inviteFailed: () => string
+  invitesFailed: () => string
+  acceptInviteFailed: () => string
+  declineInviteFailed: () => string
+  removeMemberFailed: () => string
 }
 
 const MESSAGES: LeaguesMessages = {
@@ -76,6 +95,11 @@ const MESSAGES: LeaguesMessages = {
   createFailed: () => tr('leagues.createFailed'),
   joinFailed: () => tr('leagues.joinFailed'),
   listFailed: () => tr('leagues.listFailed'),
+  inviteFailed: () => tr('leagues.inviteFailed'),
+  invitesFailed: () => tr('leagues.invitesFailed'),
+  acceptInviteFailed: () => tr('leagues.acceptInviteFailed'),
+  declineInviteFailed: () => tr('leagues.declineInviteFailed'),
+  removeMemberFailed: () => tr('leagues.removeMemberFailed'),
   loadFailed: () => tr('leagues.loadFailed'),
   leaveFailed: () => tr('leagues.leaveFailed'),
 }
@@ -91,7 +115,7 @@ function translate(error: unknown, fallback: string): Error {
 }
 
 const LEAGUE_COLUMNS = 'id, name, created_by, invite_code, created_at'
-const MEMBER_COLUMNS = 'league_id, profile_id, role, joined_at'
+const MEMBER_COLUMNS = 'league_id, profile_id, role, status, joined_at'
 const PROFILE_COLUMNS = 'id, display_name, created_at'
 
 /** Crea la lega, genera il codice e iscrive chi la crea, in transazione. */
@@ -160,32 +184,40 @@ export async function listMyLeagues(): Promise<League[]> {
   return rows.map((row) => toLeague(row, counts.get(row.id) ?? 0, roleOf(row, profileId)))
 }
 
+/**
+ * Gli inviti in attesa tornano a parte dai membri: la schermata deve poter
+ * dire «già invitato» invece di riproporre di invitare qualcuno, perché un
+ * secondo invito non fa nulla e il silenzio si legge come un guasto.
+ */
 export async function getLeague(
   id: string,
-): Promise<{ league: League; members: LeagueMember[] }> {
+): Promise<{ league: League; members: LeagueMember[]; invited: LeagueMember[] }> {
   const supabase = getSupabase()
   const profileId = await requireProfileId(supabase)
 
-  const [row, memberRows] = await Promise.all([
+  const [row, memberRows, invitedRows] = await Promise.all([
     fetchLeagueRow(supabase, id, MESSAGES.loadFailed()),
     fetchMemberRows(supabase, MESSAGES.loadFailed(), id),
+    fetchMemberRows(supabase, MESSAGES.loadFailed(), id, 'invited'),
   ])
 
-  const names = await fetchDisplayNames(
-    supabase,
-    memberRows.map((member) => member.profile_id),
-  )
+  const names = await fetchDisplayNames(supabase, [
+    ...memberRows.map((member) => member.profile_id),
+    ...invitedRows.map((member) => member.profile_id),
+  ])
 
-  const members = memberRows
-    .map((member) => ({
-      profileId: member.profile_id,
-      displayName: names.get(member.profile_id) ?? fallbackName(),
-      role: member.role,
-      joinedAt: member.joined_at,
-    }))
-    .sort(byRoleThenJoined)
+  const decora = (member: LeagueMemberRow): LeagueMember => ({
+    profileId: member.profile_id,
+    displayName: names.get(member.profile_id) ?? fallbackName(),
+    role: member.role,
+    joinedAt: member.joined_at,
+  })
 
-  return { league: toLeague(row, memberRows.length, roleOf(row, profileId)), members }
+  return {
+    league: toLeague(row, memberRows.length, roleOf(row, profileId)),
+    members: memberRows.map(decora).sort(byRoleThenJoined),
+    invited: invitedRows.map(decora).sort(byRoleThenJoined),
+  }
 }
 
 /** Esce dalla lega. Chi l'ha creata non può uscire: deve eliminarla. */
@@ -267,15 +299,19 @@ async function fetchLeagueRow(
   return row
 }
 
+/**
+ * Il filtro sullo stato non è un dettaglio: una riga `invited` è una proposta
+ * in attesa, e contarla fra i partecipanti mostrerebbe come dentro chi non ha
+ * ancora accettato.
+ */
 async function fetchMemberRows(
   supabase: SupabaseClient,
   fallback: string,
   leagueId?: string,
+  status: LeagueMemberStatus = 'member',
 ): Promise<LeagueMemberRow[]> {
-  const query = supabase.from('league_members').select(MEMBER_COLUMNS)
-  const { data, error } = await (leagueId === undefined
-    ? query
-    : query.eq('league_id', leagueId))
+  const base = supabase.from('league_members').select(MEMBER_COLUMNS).eq('status', status)
+  const { data, error } = await (leagueId === undefined ? base : base.eq('league_id', leagueId))
   if (error) throw translate(error, fallback)
 
   return (data ?? []) as LeagueMemberRow[]
@@ -384,4 +420,80 @@ export async function deleteLeague(id: string): Promise<void> {
 
   const { error } = await supabase.from('leagues').delete().eq('id', id)
   if (error) throw translate(error, MESSAGES.deleteFailed())
+}
+
+/**
+ * Invita un amico nella lega. Chiunque ne faccia parte può invitare, ma solo
+ * qualcuno che è già suo amico: è la funzione nel database a verificarlo,
+ * perché un controllo qui sarebbe pulizia e non una regola.
+ *
+ * Non è un'iscrizione: la persona invitata decide.
+ */
+export async function inviteFriendToLeague(leagueId: string, profileId: string): Promise<void> {
+  const supabase = getSupabase()
+  await requireProfileId(supabase)
+
+  const { error } = await supabase.rpc('invite_friend_to_league', {
+    target_league: leagueId,
+    friend: profileId,
+  })
+  if (error) throw translate(error, MESSAGES.inviteFailed())
+}
+
+/** Gli inviti ricevuti e ancora in attesa. */
+export async function listMyLeagueInvites(): Promise<LeagueInvite[]> {
+  const supabase = getSupabase()
+  await requireProfileId(supabase)
+
+  const { data, error } = await supabase.rpc('list_my_league_invites')
+  if (error) throw translate(error, MESSAGES.invitesFailed())
+
+  return ((data ?? []) as LeagueInviteRow[]).map((row) => ({
+    leagueId: row.league_id,
+    leagueName: row.league_name,
+    invitedByName: row.invited_by_name || fallbackName(),
+  }))
+}
+
+export async function acceptLeagueInvite(leagueId: string): Promise<void> {
+  const supabase = getSupabase()
+  await requireProfileId(supabase)
+
+  const { error } = await supabase.rpc('accept_league_invite', { target_league: leagueId })
+  if (error) throw translate(error, MESSAGES.acceptInviteFailed())
+}
+
+/**
+ * Rifiuta un invito cancellando la propria riga in attesa. Non passa da
+ * `leaveLeague` perché quella verifica il ruolo e nega l'uscita al
+ * proprietario: rifiutare non è uscire, e la riga è propria per definizione.
+ */
+export async function declineLeagueInvite(leagueId: string): Promise<void> {
+  const supabase = getSupabase()
+  const profileId = await requireProfileId(supabase)
+
+  const { error } = await supabase
+    .from('league_members')
+    .delete()
+    .eq('league_id', leagueId)
+    .eq('profile_id', profileId)
+    .eq('status', 'invited')
+  if (error) throw translate(error, MESSAGES.declineInviteFailed())
+}
+
+/**
+ * Toglie qualcun altro dalla lega. La policy la concede solo a chi l'ha
+ * creata, e gli impedisce di togliere se stesso: resterebbe una lega senza
+ * padrone, che nessuno potrebbe più eliminare.
+ */
+export async function removeMember(leagueId: string, profileId: string): Promise<void> {
+  const supabase = getSupabase()
+  await requireProfileId(supabase)
+
+  const { error } = await supabase
+    .from('league_members')
+    .delete()
+    .eq('league_id', leagueId)
+    .eq('profile_id', profileId)
+  if (error) throw translate(error, MESSAGES.removeMemberFailed())
 }
