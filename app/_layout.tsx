@@ -1,6 +1,7 @@
 import '../global.css'
 
 import { Stack, usePathname } from 'expo-router'
+import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { colorScheme } from 'nativewind'
 import { useEffect } from 'react'
@@ -10,6 +11,14 @@ import { useAuthStore } from '../src/store/auth-store'
 import { useMatchHydrated } from '../src/store/hooks'
 import { useSettingsStore } from '../src/store/settings-store'
 import { TabBar, type TabRoute } from '../src/ui/TabBar'
+
+/**
+ * Lo splash resta visibile finché la partita salvata non è stata riletta.
+ * Senza questo, l'icona spariva appena il primo componente montava e si
+ * vedeva uno schermo del colore di sfondo per qualche istante: due schermate
+ * al posto di una. Se la chiamata arriva tardi rifiuta, e non è un problema.
+ */
+void SplashScreen.preventAutoHideAsync().catch(() => {})
 
 /** Le uniche tre rotte con la barra sotto: il resto è dettaglio o modulo. */
 function tabAt(pathname: string): TabRoute | null {
@@ -29,6 +38,10 @@ export default function RootLayout() {
   useEffect(() => {
     colorScheme.set(theme)
   }, [theme])
+
+  useEffect(() => {
+    if (hydrated) void SplashScreen.hideAsync().catch(() => {})
+  }, [hydrated])
 
   // La sessione si rilegge in parallelo alla partita: non blocca l'avvio,
   // perché senza account l'app funziona comunque.
