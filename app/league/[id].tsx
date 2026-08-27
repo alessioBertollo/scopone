@@ -3,7 +3,14 @@ import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
 import { Standings } from '../../src/components/Standings'
 import { useTranslation } from '../../src/i18n/useTranslation'
-import { getLeague, type League, type LeagueMember } from '../../src/lib/leagues'
+import { type Friend, listFriends } from '../../src/lib/friends'
+import {
+  getLeague,
+  inviteFriendToLeague,
+  type League,
+  type LeagueMember,
+  removeMember,
+} from '../../src/lib/leagues'
 import {
   listLeagueMatches,
   type RemoteMatch,
@@ -15,7 +22,7 @@ import { Button } from '../../src/ui/Button'
 import { Card } from '../../src/ui/Card'
 import { Screen } from '../../src/ui/Screen'
 
-type Dettaglio = { league: League; members: LeagueMember[] }
+type Dettaglio = { league: League; members: LeagueMember[]; invited: LeagueMember[] }
 
 /**
  * Le due funzioni qui sotto stanno fuori dal componente e non possono usare
@@ -73,6 +80,7 @@ export default function LeagueScreen() {
 
   const [dettaglio, setDettaglio] = useState<Dettaglio | null>(null)
   const [matches, setMatches] = useState<RemoteMatch[]>([])
+  const [amici, setAmici] = useState<Friend[]>([])
   const [caricamento, setCaricamento] = useState(true)
   const [busy, setBusy] = useState(false)
   // Due errori distinti: uno impedisce di mostrare la lega, l'altro riguarda
@@ -102,6 +110,14 @@ export default function LeagueScreen() {
     } catch (cause) {
       setMatches([])
       setErrore(messaggio(cause, t))
+    }
+
+    // Gli amici servono solo a poterli invitare: se non arrivano, la lega
+    // resta consultabile e il codice da dettare è comunque sotto gli occhi.
+    try {
+      setAmici(await listFriends())
+    } catch {
+      setAmici([])
     } finally {
       setCaricamento(false)
     }
@@ -128,6 +144,40 @@ export default function LeagueScreen() {
     } finally {
       setBusy(false)
     }
+  }
+
+  /**
+   * `agisci` porta via dalla schermata, perché uscire o eliminare la lega
+   * lasciano niente da mostrare. Invitare e togliere invece succedono qui, e
+   * quello che cambia va riletto: il numero dei partecipanti, chi è in attesa,
+   * e chi resta da invitare.
+   */
+  const agisciERicarica = async (action: () => Promise<void>) => {
+    setBusy(true)
+    setErrore(null)
+    try {
+      await action()
+      await carica()
+    } catch (cause) {
+      setErrore(messaggio(cause, t))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const togli = (persona: LeagueMember) => {
+    Alert.alert(
+      t('league.removeTitle', { nome: persona.displayName }),
+      t('league.removeBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('league.removeOk'),
+          style: 'destructive',
+          onPress: () => void agisciERicarica(() => removeMember(id, persona.profileId)),
+        },
+      ],
+    )
   }
 
   const esci = () => {
@@ -191,13 +241,22 @@ export default function LeagueScreen() {
     )
   }
 
-  const { league, members } = dettaglio
+  const { league, members, invited } = dettaglio
 
   // Il nome per esteso lo conosce solo l'elenco dei partecipanti: la
   // classifica lavora sugli id, che da soli non direbbero niente a nessuno.
   const nomeDi = (profileId: string) =>
     members.find((membro) => membro.profileId === profileId)?.displayName ?? '?'
   const proprietario = league.role === 'owner'
+
+  // Chi è già dentro o già invitato non si propone di nuovo: il secondo
+  // invito non farebbe nulla, e un pulsante che non fa nulla sembra rotto.
+  const invitabili = amici.filter(
+    (amico) =>
+      amico.status === 'accepted' &&
+      !members.some((membro) => membro.profileId === amico.profileId) &&
+      !invited.some((membro) => membro.profileId === amico.profileId),
+  )
 
   return (
     <Screen
@@ -269,12 +328,87 @@ export default function LeagueScreen() {
               <Text numberOfLines={1} className="flex-1 text-base text-ink">
                 {membro.displayName}
               </Text>
-              <Text className="text-muted text-xs uppercase tracking-widest">
-                {membro.role === 'owner' ? t('league.roleOwner') : t('league.rolePlayer')}
-              </Text>
+              {proprietario && membro.role !== 'owner' ? (
+                <Pressable
+                  testID={`togli-${membro.profileId}`}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('league.removeMember')}
+                  disabled={busy}
+                  onPress={() => togli(membro)}
+                  className="px-2 py-1 active:opacity-60"
+                >
+                  <Text className="text-danger text-sm">{t('league.removeOk')}</Text>
+                </Pressable>
+              ) : (
+                <Text className="text-muted text-xs uppercase tracking-widest">
+                  {membro.role === 'owner' ? t('league.roleOwner') : t('league.rolePlayer')}
+                </Text>
+              )}
             </View>
           ))}
         </View>
+      </Card>
+
+      {invited.length > 0 ? (
+        <Card title={t('league.pendingInvites')}>
+          <View className="gap-3">
+            {invited.map((persona) => (
+              <View
+                key={persona.profileId}
+                className="flex-row items-center justify-between gap-3"
+              >
+                <Text numberOfLines={1} className="flex-1 text-base text-muted">
+                  {persona.displayName}
+                </Text>
+                {proprietario ? (
+                  <Pressable
+                    testID={`annulla-invito-${persona.profileId}`}
+                    accessibilityRole="button"
+                    disabled={busy}
+                    onPress={() => togli(persona)}
+                    className="px-2 py-1 active:opacity-60"
+                  >
+                    <Text className="text-danger text-sm">{t('league.removeOk')}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))}
+          </View>
+        </Card>
+      ) : null}
+
+      <Card title={t('league.inviteFriends')} subtitle={t('league.inviteFriendsHint')}>
+        {amici.length === 0 ? (
+          <Text className="text-muted text-sm">{t('league.noFriendsYet')}</Text>
+        ) : invitabili.length === 0 ? (
+          <Text className="text-muted text-sm">{t('league.noFriendsToInvite')}</Text>
+        ) : (
+          <View className="gap-3">
+            {invitabili.map((amico) => (
+              <View
+                key={amico.profileId}
+                className="flex-row items-center justify-between gap-3"
+              >
+                <Text numberOfLines={1} className="flex-1 text-base text-ink">
+                  {amico.displayName}
+                </Text>
+                <Pressable
+                  testID={`invita-${amico.profileId}`}
+                  accessibilityRole="button"
+                  disabled={busy}
+                  onPress={() =>
+                    void agisciERicarica(() => inviteFriendToLeague(id, amico.profileId))
+                  }
+                  className="rounded-full bg-felt px-3 py-1.5 active:opacity-70"
+                >
+                  <Text className="font-medium text-sm text-white">
+                    {t('league.inviteAction')}
+                  </Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
       </Card>
 
       <SectionTitle>{t('standings.title')}</SectionTitle>

@@ -2,6 +2,12 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useTranslation } from '../src/i18n/useTranslation'
+import {
+  acceptLeagueInvite,
+  declineLeagueInvite,
+  type LeagueInvite,
+  listMyLeagueInvites,
+} from '../src/lib/leagues'
 import { listMyMatches, type RemoteMatch, trySummarise } from '../src/lib/matches'
 import { isBackendConfigured } from '../src/lib/supabase'
 import { useAuthStore } from '../src/store/auth-store'
@@ -62,6 +68,9 @@ export default function HomeScreen() {
 
   const [remote, setRemote] = useState<RemoteMatch[]>([])
   const [loadingRemote, setLoadingRemote] = useState(false)
+  const [inviti, setInviti] = useState<LeagueInvite[]>([])
+  const [rispondendo, setRispondendo] = useState(false)
+  const [erroreInvito, setErroreInvito] = useState<string | null>(null)
 
   const signedIn = authStatus === 'signedIn' && user !== null
 
@@ -70,7 +79,16 @@ export default function HomeScreen() {
   const reload = useCallback(async () => {
     if (!signedIn) {
       setRemote([])
+      setInviti([])
       return
+    }
+
+    // Gli inviti stanno in un tentativo a parte: se non arrivano, le partite
+    // si vedono comunque, e viceversa. Un guasto solo non svuota la home.
+    try {
+      setInviti(await listMyLeagueInvites())
+    } catch {
+      setInviti([])
     }
     setLoadingRemote(true)
     try {
@@ -143,6 +161,24 @@ export default function HomeScreen() {
         />
       )
     })
+
+  /**
+   * Accettare o rifiutare cambia due elenchi: gli inviti e le leghe. Vanno
+   * riletti entrambi, altrimenti la lega appena accettata non compare finché
+   * non si esce e si rientra.
+   */
+  const rispondi = async (azione: () => Promise<void>) => {
+    setRispondendo(true)
+    setErroreInvito(null)
+    try {
+      await azione()
+      await Promise.all([refreshLeagues(), reload()])
+    } catch (cause) {
+      setErroreInvito(cause instanceof Error ? cause.message : t('common.error'))
+    } finally {
+      setRispondendo(false)
+    }
+  }
 
   const inCorso = hasStarted && local.status === 'ongoing'
   const punteggioLocale = `${teamNames.A} ${local.totals.A} – ${teamNames.B} ${local.totals.B}`
@@ -236,6 +272,50 @@ export default function HomeScreen() {
         </>
       ) : (
         <>
+          {inviti.length > 0 ? (
+            <>
+              <SectionTitle>{t('league.invites')}</SectionTitle>
+              {erroreInvito ? (
+                <View className="rounded-xl bg-danger/10 px-3 py-2">
+                  <Text className="text-danger text-sm">{erroreInvito}</Text>
+                </View>
+              ) : null}
+              <View className="gap-2">
+                {inviti.map((invito) => (
+                  <Card
+                    key={invito.leagueId}
+                    title={invito.leagueName}
+                    subtitle={t('league.invitedBy', { nome: invito.invitedByName })}
+                  >
+                    <View className="mt-3 flex-row gap-2">
+                      <View className="flex-1">
+                        <Button
+                          label={t('league.acceptInvite')}
+                          testID={`accetta-invito-${invito.leagueId}`}
+                          disabled={rispondendo}
+                          onPress={() =>
+                            void rispondi(() => acceptLeagueInvite(invito.leagueId))
+                          }
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Button
+                          label={t('league.declineInvite')}
+                          variant="ghost"
+                          testID={`rifiuta-invito-${invito.leagueId}`}
+                          disabled={rispondendo}
+                          onPress={() =>
+                            void rispondi(() => declineLeagueInvite(invito.leagueId))
+                          }
+                        />
+                      </View>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            </>
+          ) : null}
+
           <SectionTitle>{t('home.leagues')}</SectionTitle>
           {leaguesStatus === 'loading' ? (
             <Card>
