@@ -11,6 +11,7 @@ import { useAuthStore } from '../src/store/auth-store'
 import { useFriendsStore } from '../src/store/friends-store'
 import { useLeaguesStore } from '../src/store/leagues-store'
 import { useMatchStore } from '../src/store/match-store'
+import { Avatar } from '../src/ui/Avatar'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
 import { cn } from '../src/ui/cn'
@@ -123,14 +124,22 @@ export default function NewMatchScreen() {
    * un'unica persona.
    */
   const roster = useMemo(() => {
-    const elenco: { profileId: string; displayName: string; friend: boolean }[] = (
-      members ?? []
-    ).map((member) => ({ ...member, friend: false }))
+    const elenco: {
+      profileId: string
+      displayName: string
+      avatar: string | null
+      friend: boolean
+    }[] = (members ?? []).map((member) => ({ ...member, friend: false }))
     const noti = new Set(elenco.map((persona) => persona.profileId))
 
     for (const amico of friends) {
       if (amico.status !== 'accepted' || noti.has(amico.profileId)) continue
-      elenco.push({ profileId: amico.profileId, displayName: amico.displayName, friend: true })
+      elenco.push({
+        profileId: amico.profileId,
+        displayName: amico.displayName,
+        avatar: amico.avatar,
+        friend: true,
+      })
       noti.add(amico.profileId)
     }
 
@@ -332,13 +341,16 @@ export default function NewMatchScreen() {
             <View className="gap-3">
               {roster.map((persona) => (
                 <View key={persona.profileId}>
-                  <Text className="mb-1.5 text-ink text-sm" numberOfLines={1}>
-                    {persona.profileId === me?.id
-                      ? t('lineup.you', { nome: persona.displayName })
-                      : persona.friend
-                        ? t('lineup.friend', { nome: persona.displayName })
-                        : persona.displayName}
-                  </Text>
+                  <View className="mb-1.5 flex-row items-center gap-2">
+                    <Avatar name={persona.avatar} seed={persona.profileId} size={18} />
+                    <Text className="text-ink text-sm" numberOfLines={1}>
+                      {persona.profileId === me?.id
+                        ? t('lineup.you', { nome: persona.displayName })
+                        : persona.friend
+                          ? t('lineup.friend', { nome: persona.displayName })
+                          : persona.displayName}
+                    </Text>
+                  </View>
                   <Segmented
                     testID={`formazione-${persona.profileId}`}
                     options={[

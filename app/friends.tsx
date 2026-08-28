@@ -6,6 +6,7 @@ import type { Friend } from '../src/lib/friends'
 import { isBackendConfigured } from '../src/lib/supabase'
 import { useAuthStore } from '../src/store/auth-store'
 import { useFriendsStore } from '../src/store/friends-store'
+import { Avatar } from '../src/ui/Avatar'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
 import { Screen } from '../src/ui/Screen'
@@ -36,6 +37,7 @@ function FriendRow({
 }) {
   return (
     <View className="flex-row items-center justify-between gap-3">
+      <Avatar name={friend.avatar} seed={friend.profileId} size={22} />
       <Text numberOfLines={1} className="flex-1 text-base text-ink">
         {friend.displayName}
       </Text>

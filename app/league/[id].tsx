@@ -18,6 +18,7 @@ import {
   toStandingsMatches,
 } from '../../src/lib/matches'
 import { useLeaguesStore } from '../../src/store/leagues-store'
+import { Avatar } from '../../src/ui/Avatar'
 import { Button } from '../../src/ui/Button'
 import { Card } from '../../src/ui/Card'
 import { Screen } from '../../src/ui/Screen'
@@ -247,6 +248,8 @@ export default function LeagueScreen() {
   // classifica lavora sugli id, che da soli non direbbero niente a nessuno.
   const nomeDi = (profileId: string) =>
     members.find((membro) => membro.profileId === profileId)?.displayName ?? '?'
+  const avatarDi = (profileId: string) =>
+    members.find((membro) => membro.profileId === profileId)?.avatar ?? null
   const proprietario = league.role === 'owner'
 
   // Chi è già dentro o già invitato non si propone di nuovo: il secondo
@@ -325,6 +328,7 @@ export default function LeagueScreen() {
               key={membro.profileId}
               className="flex-row items-center justify-between gap-3"
             >
+              <Avatar name={membro.avatar} seed={membro.profileId} size={22} />
               <Text numberOfLines={1} className="flex-1 text-base text-ink">
                 {membro.displayName}
               </Text>
@@ -357,6 +361,7 @@ export default function LeagueScreen() {
                 key={persona.profileId}
                 className="flex-row items-center justify-between gap-3"
               >
+                <Avatar name={persona.avatar} seed={persona.profileId} size={22} />
                 <Text numberOfLines={1} className="flex-1 text-base text-muted">
                   {persona.displayName}
                 </Text>
@@ -389,6 +394,7 @@ export default function LeagueScreen() {
                 key={amico.profileId}
                 className="flex-row items-center justify-between gap-3"
               >
+                <Avatar name={amico.avatar} seed={amico.profileId} size={22} />
                 <Text numberOfLines={1} className="flex-1 text-base text-ink">
                   {amico.displayName}
                 </Text>
@@ -413,7 +419,7 @@ export default function LeagueScreen() {
 
       <SectionTitle>{t('standings.title')}</SectionTitle>
       <Card>
-        <Standings matches={toStandingsMatches(matches)} nameOf={nomeDi} />
+        <Standings matches={toStandingsMatches(matches)} nameOf={nomeDi} avatarOf={avatarDi} />
       </Card>
 
       <SectionTitle>{t('league.matches')}</SectionTitle>

@@ -14,6 +14,7 @@ import { useAuthStore } from '../src/store/auth-store'
 import { useMatchState } from '../src/store/hooks'
 import { useLeaguesStore } from '../src/store/leagues-store'
 import { useMatchStore } from '../src/store/match-store'
+import { Avatar } from '../src/ui/Avatar'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
 import { cn } from '../src/ui/cn'
@@ -199,9 +200,12 @@ export default function HomeScreen() {
           onPress={() => router.push('/settings')}
           className="mt-2 rounded-full border border-line bg-surface px-3 py-2 active:opacity-70"
         >
-          <Text className="text-ink text-sm" numberOfLines={1}>
-            {signedIn && user ? user.displayName : t('home.settings')}
-          </Text>
+          <View className="flex-row items-center gap-2">
+            {signedIn && user ? <Avatar name={user.avatar} seed={user.id} size={18} /> : null}
+            <Text className="text-ink text-sm" numberOfLines={1}>
+              {signedIn && user ? user.displayName : t('home.settings')}
+            </Text>
+          </View>
         </Pressable>
       </View>
 

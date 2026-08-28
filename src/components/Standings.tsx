@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { StandingsMatch } from '../domain/standings'
 import { differential, pairStandings, playerStandings } from '../domain/standings'
 import { useTranslation } from '../i18n/useTranslation'
+import { Avatar } from '../ui/Avatar'
 import { cn } from '../ui/cn'
 import { Segmented } from '../ui/Segmented'
 
@@ -10,6 +12,12 @@ type Props = {
   matches: StandingsMatch[]
   /** Nome da mostrare per ciascun id: senza, resterebbe un identificativo. */
   nameOf: (profileId: string) => string
+  /**
+   * L'icona di chi compare in classifica. Facoltativa: senza, `Avatar` ricade
+   * su una derivata dall'identificativo, che resta stabile per persona —
+   * quindi le righe hanno un'icona comunque, solo non quella scelta.
+   */
+  avatarOf?: (profileId: string) => string | null
 }
 
 type View_ = 'players' | 'pairs'
@@ -17,12 +25,15 @@ type View_ = 'players' | 'pairs'
 function Row({
   position,
   name,
+  avatars,
   played,
   won,
   diff,
 }: {
   position: number
   name: string
+  /** Una icona per giocatore: due, in una riga di coppia. */
+  avatars: ReactNode
   played: number
   won: number
   diff: number
@@ -30,6 +41,7 @@ function Row({
   return (
     <View className="flex-row items-center border-line border-b py-2 last:border-b-0">
       <Text className="w-6 text-muted text-xs tabular-nums">{position}</Text>
+      <View className="mr-1.5 flex-row gap-0.5">{avatars}</View>
       <Text className="flex-1 pr-2 text-ink text-sm" numberOfLines={1}>
         {name}
       </Text>
@@ -47,7 +59,7 @@ function Row({
   )
 }
 
-export function Standings({ matches, nameOf }: Props) {
+export function Standings({ matches, nameOf, avatarOf }: Props) {
   const { t } = useTranslation()
   const [view, setView] = useState<View_>('players')
 
@@ -60,11 +72,13 @@ export function Standings({ matches, nameOf }: Props) {
       ? playerStandings(matches).map((riga) => ({
           key: riga.profileId,
           name: nameOf(riga.profileId),
+          ids: [riga.profileId],
           ...riga,
         }))
       : pairStandings(matches).map((riga) => ({
           key: riga.profileIds.join('|'),
           name: riga.profileIds.map(nameOf).join(' e '),
+          ids: riga.profileIds,
           ...riga,
         }))
 
@@ -94,6 +108,9 @@ export function Standings({ matches, nameOf }: Props) {
             key={riga.key}
             position={indice + 1}
             name={riga.name}
+            avatars={riga.ids.map((id) => (
+              <Avatar key={id} name={avatarOf?.(id) ?? null} seed={id} size={16} />
+            ))}
             played={riga.played}
             won={riga.won}
             diff={differential(riga)}

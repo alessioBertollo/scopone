@@ -14,8 +14,11 @@ import {
   type ThemeChoice,
   useSettingsStore,
 } from '../src/store/settings-store'
+import { Avatar } from '../src/ui/Avatar'
+import { AVATARS, avatarFor } from '../src/ui/avatar-names'
 import { Button } from '../src/ui/Button'
 import { Card } from '../src/ui/Card'
+import { cn } from '../src/ui/cn'
 import { Screen } from '../src/ui/Screen'
 import { Segmented } from '../src/ui/Segmented'
 
@@ -35,6 +38,7 @@ export default function SettingsScreen() {
 
   const user = useAuthStore((state) => state.user)
   const setDisplayName = useAuthStore((state) => state.setDisplayName)
+  const setAvatar = useAuthStore((state) => state.setAvatar)
   const signOut = useAuthStore((state) => state.signOut)
   const deleteAccount = useAuthStore((state) => state.deleteAccount)
 
@@ -169,6 +173,42 @@ export default function SettingsScreen() {
                     )
                   }
                 />
+              </View>
+            </Card>
+
+            <Card
+              title={t('settings.account.avatar')}
+              subtitle={t('settings.account.avatarHint')}
+            >
+              <View className="flex-row flex-wrap gap-3">
+                {AVATARS.map((animale) => {
+                  const scelto = avatarFor(user.avatar, user.id) === animale
+
+                  return (
+                    <Pressable
+                      key={animale}
+                      testID={`avatar-${animale}`}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: scelto }}
+                      accessibilityLabel={t(`avatar.${animale}`)}
+                      disabled={busy}
+                      onPress={() =>
+                        run(
+                          () => setAvatar(animale),
+                          () => setSaved(false),
+                        )
+                      }
+                      className={cn(
+                        'h-14 w-14 items-center justify-center rounded-full bg-sunken active:opacity-60',
+                        // Un bordo e non un fondo pieno: su un fondo scuro la
+                        // sagoma color inchiostro sparirebbe.
+                        scelto && 'border-2 border-felt',
+                      )}
+                    >
+                      <Avatar name={animale} seed={user.id} size={30} />
+                    </Pressable>
+                  )
+                })}
               </View>
             </Card>
 
