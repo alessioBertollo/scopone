@@ -97,6 +97,27 @@ ritagliata, spezzando la cifra. Verifica sempre il risultato rasterizzando su
 fondo colorato (`rsvg-convert -b "#1B5E3F"`), perché su bianco il difetto è
 invisibile.
 
+### Avatar
+
+Gli animali in `assets/source/avatars/` seguono la stessa pipeline. Sono
+sagome monocrome mostrate con `tintColor`: **un solo file serve tema chiaro e
+scuro**, e per questo non devono contenere colori. I buchi — occhi, becco,
+pancia del pinguino — si fanno con una `<mask>` e non con `evenodd`, che con le
+forme sovrapposte riempirebbe invece di ritagliare.
+
+Niente tratti sottili: a ventiquattro punti sparisconono. È il motivo per cui
+nell'insieme non c'è un cervo, e perché il granchio ha le zampe innestate nel
+corpo invece che staccate.
+
+L'elenco vive in `src/ui/avatar-names.ts`; `src/ui/avatars.ts` mappa i nomi
+alle immagini con `satisfies`, così aggiungere un animale senza il disegno dà
+errore di compilazione invece di un buco a schermo.
+
+`assets/source` è escluso da Biome in `biome.json`. Non è pigrizia: quegli SVG
+sono sorgenti di disegno, non markup di una pagina, e la regola di
+accessibilità sugli SVG inline pretenderebbe un `<title>` che nel PNG generato
+non esiste. L'etichetta vera la mettono i componenti che mostrano le immagini.
+
 ## Testi e lingue
 
 Ogni stringa che l'utente legge sta nei dizionari `src/i18n/it.ts` e
