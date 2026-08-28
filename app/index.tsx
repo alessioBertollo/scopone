@@ -2,12 +2,6 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { useTranslation } from '../src/i18n/useTranslation'
-import {
-  acceptLeagueInvite,
-  declineLeagueInvite,
-  type LeagueInvite,
-  listMyLeagueInvites,
-} from '../src/lib/leagues'
 import { listMyMatches, type RemoteMatch, trySummarise } from '../src/lib/matches'
 import { isBackendConfigured } from '../src/lib/supabase'
 import { useAuthStore } from '../src/store/auth-store'
@@ -66,10 +60,12 @@ export default function HomeScreen() {
   const leagues = useLeaguesStore((state) => state.leagues)
   const leaguesStatus = useLeaguesStore((state) => state.status)
   const refreshLeagues = useLeaguesStore((state) => state.refresh)
+  const inviti = useLeaguesStore((state) => state.invites)
+  const acceptInvite = useLeaguesStore((state) => state.acceptInvite)
+  const declineInvite = useLeaguesStore((state) => state.declineInvite)
 
   const [remote, setRemote] = useState<RemoteMatch[]>([])
   const [loadingRemote, setLoadingRemote] = useState(false)
-  const [inviti, setInviti] = useState<LeagueInvite[]>([])
   const [rispondendo, setRispondendo] = useState(false)
   const [erroreInvito, setErroreInvito] = useState<string | null>(null)
 
@@ -80,16 +76,7 @@ export default function HomeScreen() {
   const reload = useCallback(async () => {
     if (!signedIn) {
       setRemote([])
-      setInviti([])
       return
-    }
-
-    // Gli inviti stanno in un tentativo a parte: se non arrivano, le partite
-    // si vedono comunque, e viceversa. Un guasto solo non svuota la home.
-    try {
-      setInviti(await listMyLeagueInvites())
-    } catch {
-      setInviti([])
     }
     setLoadingRemote(true)
     try {
@@ -164,16 +151,15 @@ export default function HomeScreen() {
     })
 
   /**
-   * Accettare o rifiutare cambia due elenchi: gli inviti e le leghe. Vanno
-   * riletti entrambi, altrimenti la lega appena accettata non compare finché
-   * non si esce e si rientra.
+   * Le azioni dello store rileggono già leghe e inviti insieme: qui resta da
+   * ricaricare le partite, perché accettare un invito può farne comparire.
    */
   const rispondi = async (azione: () => Promise<void>) => {
     setRispondendo(true)
     setErroreInvito(null)
     try {
       await azione()
-      await Promise.all([refreshLeagues(), reload()])
+      await reload()
     } catch (cause) {
       setErroreInvito(cause instanceof Error ? cause.message : t('common.error'))
     } finally {
@@ -297,9 +283,7 @@ export default function HomeScreen() {
                           label={t('league.acceptInvite')}
                           testID={`accetta-invito-${invito.leagueId}`}
                           disabled={rispondendo}
-                          onPress={() =>
-                            void rispondi(() => acceptLeagueInvite(invito.leagueId))
-                          }
+                          onPress={() => void rispondi(() => acceptInvite(invito.leagueId))}
                         />
                       </View>
                       <View className="flex-1">
@@ -308,9 +292,7 @@ export default function HomeScreen() {
                           variant="ghost"
                           testID={`rifiuta-invito-${invito.leagueId}`}
                           disabled={rispondendo}
-                          onPress={() =>
-                            void rispondi(() => declineLeagueInvite(invito.leagueId))
-                          }
+                          onPress={() => void rispondi(() => declineInvite(invito.leagueId))}
                         />
                       </View>
                     </View>

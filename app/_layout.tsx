@@ -8,7 +8,7 @@ import { useEffect } from 'react'
 import { View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { useAuthStore } from '../src/store/auth-store'
-import { useMatchHydrated } from '../src/store/hooks'
+import { useMatchHydrated, usePendingWatch } from '../src/store/hooks'
 import { useSettingsStore } from '../src/store/settings-store'
 import { TabBar, type TabRoute } from '../src/ui/TabBar'
 
@@ -32,6 +32,8 @@ export default function RootLayout() {
   const theme = useSettingsStore((state) => state.theme)
   const signedIn = useAuthStore((state) => state.status) === 'signedIn'
   const tab = tabAt(usePathname())
+
+  usePendingWatch()
 
   // Il tema scelto va riapplicato a ogni avvio: NativeWind riparte sempre da
   // quello di sistema, e chi ha scelto "scuro" non vuole rivedere il chiaro.

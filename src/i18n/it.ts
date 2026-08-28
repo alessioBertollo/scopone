@@ -347,6 +347,7 @@ export const it = {
   'friends.removeConfirmOk': 'Rimuovi',
   'friends.empty': 'Non hai ancora nessun amico. Condividi il tuo codice o aggiungine uno.',
 
+  'tabs.waiting': '{etichetta}, {numero} in attesa',
   'tabs.home': 'Home',
   'tabs.friends': 'Amici',
   'tabs.standings': 'Classifiche',

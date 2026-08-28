@@ -99,7 +99,23 @@ const backend = vi.hoisted(() => {
       const forced = state.errors[name]
       if (forced) return { data: null, error: forced }
 
-      const rows = bucket(name).filter((row) => filters.every((keep) => keep(row)))
+      let rows = bucket(name).filter((row) => filters.every((keep) => keep(row)))
+
+      // Le leghe sono visibili solo a chi ne fa parte davvero: un invito in
+      // attesa non basta. Senza questa riga il finto backend sarebbe più
+      // permissivo del database, e i test passerebbero su comportamenti che
+      // in produzione non esistono.
+      if (name === 'leagues' && !removing) {
+        const uid = state.session?.user.id
+        rows = rows.filter((row) =>
+          db.league_members.some(
+            (member) =>
+              member.league_id === row.id &&
+              member.profile_id === uid &&
+              member.status === 'member',
+          ),
+        )
+      }
 
       if (removing) {
         // Rimozione sul posto, senza riassegnare: i test guardano l'array.
@@ -754,5 +770,62 @@ describe('inviti alla lega', () => {
 
     await acceptLeagueInvite('lega-mia')
     await expect(acceptLeagueInvite('lega-mia')).rejects.toThrow(/invito/i)
+  })
+})
+
+describe('inviti nello store', () => {
+  it('li legge insieme alle leghe, non con una seconda visita', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+    const riga = backend.db.league_members.find((row) => row.profile_id === BRUNO.id)
+    if (riga) riga.invited_by = ADA.id
+
+    await store.getState().refresh()
+
+    // La lega non è ancora sua: l'invito sì.
+    expect(store.getState().leagues).toEqual([])
+    expect(store.getState().invites).toEqual([
+      { leagueId: 'lega-mia', leagueName: 'Giovedì', invitedByName: 'Ada' },
+    ])
+  })
+
+  it('accettando sposta l invito nelle leghe, in una lettura sola', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+
+    await store.getState().acceptInvite('lega-mia')
+
+    expect(store.getState().invites).toEqual([])
+    expect(store.getState().leagues.map((lega) => lega.id)).toEqual(['lega-mia'])
+    expect(store.getState().leagues[0]?.memberCount).toBe(2)
+  })
+
+  it('rifiutando toglie l invito senza far comparire la lega', async () => {
+    seedSession(BRUNO)
+    seedLeague('lega-mia', 'Giovedì', 'ABCDE2', ADA.id, [
+      { profileId: ADA.id, role: 'owner' },
+      { profileId: BRUNO.id, status: 'invited' },
+    ])
+
+    await store.getState().declineInvite('lega-mia')
+
+    expect(store.getState().invites).toEqual([])
+    expect(store.getState().leagues).toEqual([])
+  })
+
+  it('senza sessione non lancia: riporta l errore e lascia gli elenchi vuoti', async () => {
+    // Il backend è configurato in questo file, ma la sessione no: è il caso
+    // di chi apre l'app dopo che il token è scaduto.
+    await store.getState().refresh()
+
+    expect(store.getState().invites).toEqual([])
+    expect(store.getState().leagues).toEqual([])
+    expect(store.getState().status).toBe('error')
   })
 })

@@ -350,6 +350,7 @@ export const en: Record<keyof typeof it, string> = {
   'friends.removeConfirmOk': 'Remove',
   'friends.empty': 'No friends yet. Share your code or add one.',
 
+  'tabs.waiting': '{etichetta}, {numero} waiting',
   'tabs.home': 'Home',
   'tabs.friends': 'Friends',
   'tabs.standings': 'Standings',

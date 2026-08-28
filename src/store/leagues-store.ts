@@ -1,10 +1,14 @@
 import { create } from 'zustand'
 import {
+  acceptLeagueInvite,
   createLeague,
+  declineLeagueInvite,
   deleteLeague,
   joinLeagueByCode,
   type League,
+  type LeagueInvite,
   leaveLeague,
+  listMyLeagueInvites,
   listMyLeagues,
 } from '../lib/leagues'
 import { isBackendConfigured } from '../lib/supabase'
@@ -18,9 +22,18 @@ export type LeaguesStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 export type LeaguesStore = {
   leagues: League[]
+  /**
+   * Inviti ricevuti e non ancora sciolti. Stanno qui e non nella schermata
+   * perché due posti li vogliono: la home li mostra, la barra delle schede ne
+   * conta soltanto quanti sono — e due letture separate darebbero due momenti
+   * diversi, con un pallino che non corrisponde a quello che si vede sotto.
+   */
+  invites: LeagueInvite[]
   status: LeaguesStatus
   error: string | null
   refresh: () => Promise<void>
+  acceptInvite: (leagueId: string) => Promise<void>
+  declineInvite: (leagueId: string) => Promise<void>
   create: (name: string) => Promise<League>
   join: (code: string) => Promise<League>
   leave: (id: string) => Promise<void>
@@ -42,6 +55,7 @@ const NO_BACKEND =
  */
 export const useLeaguesStore = create<LeaguesStore>()((set, get) => ({
   leagues: [],
+  invites: [],
   status: 'idle',
   error: null,
 
@@ -50,19 +64,39 @@ export const useLeaguesStore = create<LeaguesStore>()((set, get) => ({
     // `getSupabase()` lancerebbe: l'elenco vuoto è la risposta giusta, e
     // contare i punti al tavolo resta possibile.
     if (!isBackendConfigured) {
-      set({ leagues: [], status: 'ready', error: null })
+      set({ leagues: [], invites: [], status: 'ready', error: null })
       return
     }
 
     set({ status: 'loading', error: null })
 
     try {
-      set({ leagues: await listMyLeagues(), status: 'ready', error: null })
+      // In parallelo: sono due letture indipendenti, e in fila
+      // raddoppierebbero l'attesa di una schermata che si apre spesso.
+      const [leagues, invites] = await Promise.all([listMyLeagues(), listMyLeagueInvites()])
+      set({ leagues, invites, status: 'ready', error: null })
     } catch (error) {
       // Le leghe già in memoria restano: una rete che cade non è un buon
       // motivo per svuotare la schermata sotto gli occhi di chi la guarda.
       set({ status: 'error', error: messageOf(error) })
     }
+  },
+
+  /**
+   * Accettare cambia due elenchi: l'invito sparisce e una lega compare. Un
+   * `refresh` solo li rilegge entrambi nello stesso momento, che è la ragione
+   * per cui stanno nello stesso store.
+   */
+  acceptInvite: async (leagueId) => {
+    requireBackend()
+    await acceptLeagueInvite(leagueId)
+    await get().refresh()
+  },
+
+  declineInvite: async (leagueId) => {
+    requireBackend()
+    await declineLeagueInvite(leagueId)
+    await get().refresh()
   },
 
   create: async (name) => {
