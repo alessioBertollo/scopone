@@ -37,5 +37,13 @@ jobs:
 
       # Intercetta dipendenze native disallineate o peer mancanti: sono
       # problemi che non emergono dai test perché rompono solo la build vera.
+      #
+      # Non blocca di proposito. Il controllo sulle versioni confronta con
+      # quelle che l'SDK si aspetta *oggi*, ed Expo pubblica patch di continuo:
+      # come cancello farebbe fallire main nei giorni in cui nessuno ha toccato
+      # il codice. Un allarme che suona da solo viene ignorato, e allora tanto
+      # vale che non fermi la coda. L'elenco resta visibile nei log, e
+      # l'allineamento si fa prima di una build — che è quando conta.
       - name: Expo doctor
         run: npm run doctor
+        continue-on-error: true
