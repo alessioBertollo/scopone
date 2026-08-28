@@ -28,4 +28,14 @@ render icon-background.svg 1024 android-icon-background.png
 render icon-monochrome.svg 1024 android-icon-monochrome.png
 render icon-foreground.svg 1024 splash-icon.png
 render icon.svg              48 favicon.png
+
+# Avatar: sagome monocrome mostrate con tintColor, che ne cambia il colore a
+# runtime per seguire il tema. 128 basta: si vedono a 24-32 punti, e su uno
+# schermo a tripla densità sono 96 pixel.
+mkdir -p "$out/avatars"
+for sorgente in "$src"/avatars/*.svg; do
+  nome="$(basename "$sorgente" .svg)"
+  rsvg-convert -w 128 -h 128 "$sorgente" -o "$out/avatars/$nome.png"
+  echo "  avatars/$nome.png  128x128"
+done
 echo "Fatto."

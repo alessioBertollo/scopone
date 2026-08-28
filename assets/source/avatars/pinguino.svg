@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Sagoma monocroma: il colore lo mette l'app con tintColor, per
+       seguire il tema chiaro o scuro. Non aggiungere colori qui. -->
+  <mask id="m">
+    <rect width="64" height="64" fill="#fff"/>
+    <ellipse cx="32" cy="42" rx="10" ry="14" fill="#000"/><circle cx="26" cy="20" r="2.5" fill="#000"/><circle cx="38" cy="20" r="2.5" fill="#000"/><path d="M28 25 L36 25 L32 31 Z" fill="#000"/>
+  </mask>
+  <g fill="#000" mask="url(#m)">
+    <ellipse cx="9" cy="36" rx="4" ry="12"/><ellipse cx="55" cy="36" rx="4" ry="12"/><path d="M32 7 C44 7 52 20 52 36 C52 50 43 58 32 58 C21 58 12 50 12 36 C12 20 20 7 32 7 Z"/>
+  </g>
+</svg>
