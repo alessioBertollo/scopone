@@ -267,6 +267,7 @@ export const it = {
   'auth.sendFailed': 'Non è stato possibile inviare il codice. Riprova.',
   'auth.verifyFailed': 'Accesso non riuscito. Riprova.',
   'auth.signOutFailed': 'Uscita non riuscita. Riprova.',
+  'auth.saveAvatarFailed': 'Non è stato possibile salvare l’icona. Riprova.',
   'auth.saveNameFailed': 'Non è stato possibile salvare il nome. Riprova.',
   'auth.deleteFailed': 'Non è stato possibile cancellare l’account. Riprova.',
 

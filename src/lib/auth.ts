@@ -8,7 +8,13 @@ import { getSupabase } from './supabase'
  * riconoscersi al prossimo accesso, il nome per gli altri giocatori.
  * Tutto il resto di `auth.users` non serve e non viene portato in giro.
  */
-export type AuthUser = { id: string; email: string; displayName: string }
+export type AuthUser = {
+  id: string
+  email: string
+  displayName: string
+  /** Animale scelto come icona. Null se non ha ancora scelto. */
+  avatar: string | null
+}
 
 /** Stessi limiti del check su `profiles.display_name` nella migrazione 0001. */
 const NAME_MIN = 1
@@ -41,6 +47,7 @@ const MESSAGES = {
   verifyFailed: () => tr('auth.verifyFailed'),
   signOutFailed: () => tr('auth.signOutFailed'),
   saveNameFailed: () => tr('auth.saveNameFailed'),
+  saveAvatarFailed: () => tr('auth.saveAvatarFailed'),
   deleteFailed: () => tr('auth.deleteFailed'),
 } as const
 
@@ -116,13 +123,18 @@ export async function updateDisplayName(name: string): Promise<AuthUser> {
     .from('profiles')
     .update({ display_name: displayName })
     .eq('id', user.id)
-    .select('id, display_name, created_at')
+    .select('id, display_name, avatar, created_at')
     .single()
 
   if (error) throw translate(error, MESSAGES.saveNameFailed())
 
   const row = data as ProfileRow | null
-  return { id: user.id, email: user.email ?? '', displayName: row?.display_name ?? displayName }
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    displayName: row?.display_name ?? displayName,
+    avatar: row?.avatar ?? null,
+  }
 }
 
 // ------------------------------------------------------------ utilità interne
@@ -139,9 +151,14 @@ async function requireUser(supabase: SupabaseClient): Promise<User> {
 
 async function toAuthUser(supabase: SupabaseClient, user: User): Promise<AuthUser> {
   const email = user.email ?? ''
-  const displayName = await readDisplayName(supabase, user.id)
+  const profilo = await readProfile(supabase, user.id)
 
-  return { id: user.id, email, displayName: displayName ?? nameFromEmail(email) }
+  return {
+    id: user.id,
+    email,
+    displayName: profilo?.display_name ?? nameFromEmail(email),
+    avatar: profilo?.avatar ?? null,
+  }
 }
 
 /**
@@ -150,18 +167,17 @@ async function toAuthUser(supabase: SupabaseClient, user: User): Promise<AuthUse
  * visibile — si va avanti con un nome ricavato dall'email invece di buttare
  * fuori chi la sessione ce l'ha già.
  */
-async function readDisplayName(supabase: SupabaseClient, id: string): Promise<string | null> {
+async function readProfile(supabase: SupabaseClient, id: string): Promise<ProfileRow | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, created_at')
+      .select('id, display_name, avatar, created_at')
       .eq('id', id)
       .maybeSingle()
 
     if (error) return null
 
-    const row = data as ProfileRow | null
-    return row?.display_name ?? null
+    return (data ?? null) as ProfileRow | null
   } catch {
     return null
   }
@@ -298,4 +314,34 @@ export async function deleteAccount(): Promise<void> {
   // Il token è già firmato e resta valido finché non lo si butta: nessuno
   // lo revoca al posto nostro solo perché l'utente non esiste più.
   await supabase.auth.signOut()
+}
+
+/**
+ * Salva l'animale scelto come icona.
+ *
+ * Non valida il nome contro l'elenco dell'app: il database accetta qualunque
+ * parola minuscola di proposito, e chi legge ricade su un'icona derivata se
+ * non la riconosce. Così un'app più nuova può salvare un animale che una più
+ * vecchia non conosce, senza che nessuna delle due si rompa.
+ */
+export async function updateAvatar(avatar: string): Promise<AuthUser> {
+  const supabase = getSupabase()
+  const user = await requireUser(supabase)
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ avatar })
+    .eq('id', user.id)
+    .select('id, display_name, avatar, created_at')
+    .single()
+
+  if (error) throw translate(error, MESSAGES.saveAvatarFailed())
+
+  const row = data as ProfileRow | null
+  return {
+    id: user.id,
+    email: user.email ?? '',
+    displayName: row?.display_name ?? nameFromEmail(user.email ?? ''),
+    avatar: row?.avatar ?? avatar,
+  }
 }

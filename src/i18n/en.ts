@@ -271,6 +271,7 @@ export const en: Record<keyof typeof it, string> = {
   'auth.sendFailed': 'The code could not be sent. Try again.',
   'auth.verifyFailed': 'Sign-in did not go through. Try again.',
   'auth.signOutFailed': 'Sign-out did not go through. Try again.',
+  'auth.saveAvatarFailed': 'The icon could not be saved. Try again.',
   'auth.saveNameFailed': 'The name could not be saved. Try again.',
   'auth.deleteFailed': 'The account could not be deleted. Try again.',
 

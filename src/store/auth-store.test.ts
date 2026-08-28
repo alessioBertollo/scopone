@@ -190,7 +190,12 @@ describe('accesso', () => {
 
     const state = store.getState()
     expect(state.status).toBe('signedIn')
-    expect(state.user).toEqual({ id: ADA.id, email: ADA.email, displayName: 'Ada L.' })
+    expect(state.user).toEqual({
+      id: ADA.id,
+      email: ADA.email,
+      displayName: 'Ada L.',
+      avatar: null,
+    })
   })
 
   it('col codice sbagliato resta fuori e spiega perché', async () => {
@@ -243,7 +248,12 @@ describe('ripristino della sessione', () => {
 
     const state = store.getState()
     expect(state.status).toBe('signedIn')
-    expect(state.user).toEqual({ id: ADA.id, email: ADA.email, displayName: 'Ada L.' })
+    expect(state.user).toEqual({
+      id: ADA.id,
+      email: ADA.email,
+      displayName: 'Ada L.',
+      avatar: null,
+    })
   })
 
   it('senza sessione salvata dichiara di essere fuori', async () => {

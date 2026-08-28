@@ -5,6 +5,7 @@ import {
   getCurrentUser,
   sendLoginCode,
   signOut as signOutFromBackend,
+  updateAvatar,
   updateDisplayName,
   verifyLoginCode,
 } from '../lib/auth'
@@ -26,6 +27,7 @@ export type AuthStore = {
   verifyCode: (email: string, code: string) => Promise<void>
   signOut: () => Promise<void>
   setDisplayName: (name: string) => Promise<void>
+  setAvatar: (avatar: string) => Promise<void>
   /** Cancella account e dati collegati. Irreversibile. */
   deleteAccount: () => Promise<void>
 }
@@ -87,6 +89,11 @@ export const useAuthStore = create<AuthStore>()((set) => ({
 
   setDisplayName: async (name) => {
     const user = await updateDisplayName(name)
+    set({ user })
+  },
+
+  setAvatar: async (avatar) => {
+    const user = await updateAvatar(avatar)
     set({ user })
   },
 

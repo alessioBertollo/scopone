@@ -14,6 +14,8 @@ export type { FriendStatus }
 export type Friend = {
   profileId: string
   displayName: string
+  /** Animale scelto come icona. Null se non ha ancora scelto. */
+  avatar: string | null
   status: FriendStatus
   incoming: boolean
 }
@@ -83,6 +85,7 @@ export async function listFriends(): Promise<Friend[]> {
   return ((data ?? []) as FriendRow[]).map((row) => ({
     profileId: row.profile_id,
     displayName: row.display_name || fallbackName(),
+    avatar: row.avatar,
     status: row.status,
     incoming: row.incoming,
   }))

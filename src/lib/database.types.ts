@@ -21,6 +21,8 @@ export type ProfileRow = {
   display_name: string
   /** Codice da dettare per farsi aggiungere. Aggiunto dalla migrazione 0004. */
   friend_code: string
+  /** Animale scelto come icona. Null = mai scelto, lo deriva l'app. */
+  avatar: string | null
   created_at: string
 }
 
@@ -32,6 +34,7 @@ export type ProfileRow = {
 export type FriendRow = {
   profile_id: string
   display_name: string
+  avatar: string | null
   status: FriendStatus
   /** Vero se la richiesta l'ha mandata l'altra persona. */
   incoming: boolean

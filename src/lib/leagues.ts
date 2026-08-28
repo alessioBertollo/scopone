@@ -30,6 +30,8 @@ export type League = {
 export type LeagueMember = {
   profileId: string
   displayName: string
+  /** Animale scelto come icona. Null se non ha ancora scelto. */
+  avatar: string | null
   role: LeagueRole
   joinedAt: string
 }
@@ -116,7 +118,7 @@ function translate(error: unknown, fallback: string): Error {
 
 const LEAGUE_COLUMNS = 'id, name, created_by, invite_code, created_at'
 const MEMBER_COLUMNS = 'league_id, profile_id, role, status, joined_at'
-const PROFILE_COLUMNS = 'id, display_name, created_at'
+const PROFILE_COLUMNS = 'id, display_name, avatar, created_at'
 
 /** Crea la lega, genera il codice e iscrive chi la crea, in transazione. */
 export async function createLeague(name: string): Promise<League> {
@@ -206,12 +208,16 @@ export async function getLeague(
     ...invitedRows.map((member) => member.profile_id),
   ])
 
-  const decora = (member: LeagueMemberRow): LeagueMember => ({
-    profileId: member.profile_id,
-    displayName: names.get(member.profile_id) ?? fallbackName(),
-    role: member.role,
-    joinedAt: member.joined_at,
-  })
+  const decora = (member: LeagueMemberRow): LeagueMember => {
+    const profilo = names.get(member.profile_id)
+    return {
+      profileId: member.profile_id,
+      displayName: profilo?.displayName ?? fallbackName(),
+      avatar: profilo?.avatar ?? null,
+      role: member.role,
+      joinedAt: member.joined_at,
+    }
+  }
 
   return {
     league: toLeague(row, memberRows.length, roleOf(row, profileId)),
@@ -324,25 +330,25 @@ async function fetchMemberRows(
 async function fetchDisplayNames(
   supabase: SupabaseClient,
   ids: string[],
-): Promise<Map<string, string>> {
-  const names = new Map<string, string>()
-  if (ids.length === 0) return names
+): Promise<Map<string, { displayName: string; avatar: string | null }>> {
+  const profili = new Map<string, { displayName: string; avatar: string | null }>()
+  if (ids.length === 0) return profili
 
   try {
     const { data, error } = await supabase
       .from('profiles')
       .select(PROFILE_COLUMNS)
       .in('id', ids)
-    if (error) return names
+    if (error) return profili
 
     for (const row of (data ?? []) as ProfileRow[]) {
-      names.set(row.id, row.display_name)
+      profili.set(row.id, { displayName: row.display_name, avatar: row.avatar })
     }
   } catch {
-    return names
+    return profili
   }
 
-  return names
+  return profili
 }
 
 function toLeague(row: LeagueRow, memberCount: number, role: LeagueRole): League {

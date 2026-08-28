@@ -586,12 +586,14 @@ describe('dettaglio della lega', () => {
       {
         profileId: BRUNO.id,
         displayName: 'Bruno',
+        avatar: null,
         role: 'owner',
         joinedAt: '2026-03-01T00:00:00Z',
       },
       {
         profileId: ADA.id,
         displayName: 'Ada',
+        avatar: null,
         role: 'member',
         joinedAt: '2026-01-02T00:00:00Z',
       },
